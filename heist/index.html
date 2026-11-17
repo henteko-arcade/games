@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<script src="../lib/gate.js" data-game="heist" data-title="ぬすめ！ヘンテコ" data-hash="99a8da0ced02d16eb308b36e4075ad96135166eafa4c6d6b28413dffeb0ec4a2"></script>
+<title>ぬすめ！ヘンテコ</title>
+<meta name="theme-color" content="#8fd36e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ゲームズ">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #8fd36e; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent; touch-action: none; overscroll-behavior: none;
+  }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+  .corner {
+    position: fixed; z-index: 10; top: calc(env(safe-area-inset-top, 0px) + 12px);
+    width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,.28); color: #fff; border: none;
+    font-size: 21px; line-height: 42px; text-align: center; text-decoration: none;
+  }
+  #backBtn { left: calc(env(safe-area-inset-left, 0px) + 12px); }
+  #muteBtn { right: calc(env(safe-area-inset-right, 0px) + 12px); }
+  #hud { position: fixed; z-index: 5; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 12px);
+         display: flex; flex-direction: column; align-items: center; gap: 5px; pointer-events: none; }
+  .pill { background: rgba(0,0,0,.38); border-radius: 999px; padding: 5px 16px; font-weight: 900; font-size: 22px; text-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .row { display: flex; gap: 6px; }
+  .small { font-size: 13px; padding: 4px 11px; }
+  #money.bump { animation: bump .25s; }
+  @keyframes bump { 50% { transform: scale(1.15); } }
+
+  #action {
+    position: fixed; z-index: 8; right: calc(env(safe-area-inset-right, 0px) + 16px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
+    min-width: 120px; padding: 14px 18px; border-radius: 22px; border: none;
+    font-size: 20px; font-weight: 900; color: #fff; background: #5fbf6a;
+    box-shadow: 0 5px 0 #3f9a4a, 0 8px 18px rgba(0,0,0,.25); display: none; line-height: 1.15;
+  }
+  #action small { display: block; font-size: 12px; font-weight: 800; opacity: .9; }
+  #action.steal { background: #e8524a; box-shadow: 0 5px 0 #b33a33, 0 8px 18px rgba(0,0,0,.25); }
+  #action.sell { background: #e2a03a; box-shadow: 0 5px 0 #b37a1f, 0 8px 18px rgba(0,0,0,.25); }
+  #action:disabled { background: #9a9a9a; box-shadow: 0 5px 0 #777; }
+  #action:active { transform: translateY(3px); }
+
+  #menuBtn { position: fixed; z-index: 8; right: calc(env(safe-area-inset-right, 0px) + 16px); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    width: 64px; height: 64px; border-radius: 20px; border: none; background: #ffcf3f; color: #4a2d00; font-size: 26px; font-weight: 900;
+    box-shadow: 0 4px 0 #c99400, 0 6px 16px rgba(0,0,0,.25); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+  #menuBtn small { font-size: 10px; margin-top: 3px; }
+
+  #hint { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 132px);
+    background: rgba(255,255,255,.93); color: #3a2a1a; border-radius: 14px; padding: 9px 15px; max-width: 92vw;
+    font-weight: 800; font-size: 14px; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,.2); pointer-events: none; transition: opacity .3s; }
+  #hint.hidden { opacity: 0; }
+  #alert { position: fixed; z-index: 9; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 182px);
+    background: #e8524a; color: #fff; border-radius: 14px; padding: 9px 16px; font-weight: 900; font-size: 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25); pointer-events: none; display: none; animation: shake .4s infinite; white-space: nowrap; }
+  @keyframes shake { 25% { transform: translateX(-52%); } 75% { transform: translateX(-48%); } }
+
+  #joy { position: fixed; z-index: 6; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+         background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.45); pointer-events: none; display: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255,255,255,.75); }
+
+  #toast { position: fixed; z-index: 11; left: 50%; top: 36%; transform: translate(-50%, -50%) scale(.8);
+    background: #ffcf3f; color: #4a2d00; border-radius: 18px; padding: 14px 22px; font-size: 21px; font-weight: 900;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25); opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; text-align: center; max-width: 88vw; }
+  #toast small { font-size: 14px; font-weight: 700; }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  #menu { position: fixed; z-index: 20; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; justify-content: center; }
+  #menu.hidden { display: none; }
+  .sheet { width: 100%; max-width: 520px; max-height: 80vh; background: #fff8ec; color: #3a2a1a; border-radius: 24px 24px 0 0;
+    padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px); display: flex; flex-direction: column; animation: up .25s ease-out; }
+  @keyframes up { from { transform: translateY(40%); opacity: .4; } }
+  .sheetHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .sheetHead b { font-size: 20px; }
+  #menuClose { width: 38px; height: 38px; border-radius: 50%; border: none; background: #eadfcb; font-size: 18px; font-weight: 900; color: #3a2a1a; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab { flex: 1; padding: 9px 2px; border-radius: 12px; border: none; background: #eadfcb; color: #3a2a1a; font-weight: 800; font-size: 13px; white-space: nowrap; }
+  .tab.on { background: #ffcf3f; }
+  .list { overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 8px; }
+  .dex { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .dexc { background: #fff; border-radius: 14px; padding: 8px 6px; text-align: center; box-shadow: 0 2px 0 #eadfcb; }
+  .dexc .dot { width: 34px; height: 34px; border-radius: 50%; margin: 2px auto 4px; border: 3px solid rgba(0,0,0,.08); }
+  .dexc .nm { font-weight: 900; font-size: 12px; }
+  .dexc .rr { font-size: 10px; font-weight: 900; }
+  .dexc .vv { font-size: 11px; margin-top: 2px; letter-spacing: 2px; }
+  .dexc.unk { opacity: .5; }
+  .stat { display: flex; justify-content: space-between; padding: 9px 12px; background: #fff; border-radius: 12px; font-weight: 700; font-size: 14px; }
+  .big { background: #fff; border-radius: 16px; padding: 14px; text-align: center; font-size: 14px; line-height: 1.7; font-weight: 700; }
+  .buy { border: none; border-radius: 12px; padding: 12px; font-weight: 900; font-size: 16px; background: #b67cff; color: #fff; box-shadow: 0 3px 0 #8a55d1; width: 100%; margin-top: 8px; }
+  .buy:disabled { background: #cfc4b0; box-shadow: 0 3px 0 #b3a891; }
+  #eventPill { background: linear-gradient(90deg, #ff7a59, #ffcf3f); color: #3a2000; text-shadow: none; font-size: 14px; animation: glow 1.2s ease-in-out infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 14px rgba(255,207,63,.9); } }
+  #items { position: fixed; z-index: 8; left: calc(env(safe-area-inset-left, 0px) + 14px); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); display: flex; gap: 8px; }
+  .item { width: 58px; height: 58px; border-radius: 18px; border: none; background: rgba(255,255,255,.92); font-size: 26px; position: relative; box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+  .item b { position: absolute; right: -5px; top: -5px; background: #e8524a; color: #fff; font-size: 12px; min-width: 20px; height: 20px; border-radius: 10px; line-height: 20px; padding: 0 4px; }
+  .item.on { background: #9dff7a; }
+  .item:active { transform: translateY(2px); }
+  .shopSec { font-weight: 900; font-size: 14px; margin: 6px 2px 0; }
+  .card { background: #fff; border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 0 #eadfcb; }
+  .card .ic { font-size: 30px; width: 40px; text-align: center; }
+  .card .tx { flex: 1; min-width: 0; }
+  .card .nm { font-weight: 900; font-size: 15px; }
+  .card .ds { font-size: 12px; opacity: .75; margin-top: 2px; }
+  .lv { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+  .lv i { width: 8px; height: 8px; border-radius: 50%; background: #e3d6bf; display: inline-block; }
+  .lv i.on { background: #ffb020; }
+  .sbuy { border: none; border-radius: 12px; padding: 10px 10px; min-width: 84px; font-weight: 900; font-size: 14px; background: #5fbf6a; color: #fff; box-shadow: 0 3px 0 #3f9a4a; }
+  .sbuy:disabled { background: #cfc4b0; box-shadow: 0 3px 0 #b3a891; }
+  .done { font-size: 13px; font-weight: 900; color: #3f9a4a; }
+  .evlist { font-size: 12px; opacity: .8; line-height: 1.7; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; background: #8fd36e; z-index: 30; }
+</style>
+</head>
+<body>
+<div id="loading">読みこみ中…</div>
+<a id="backBtn" class="corner" href="../" aria-label="ゲーム一覧にもどる">←</a>
+<button id="muteBtn" class="corner" aria-label="音のオン・オフ">🔊</button>
+<div id="hud">
+  <div class="pill" id="money">💰 0</div>
+  <div class="row">
+    <div class="pill small" id="income">+0/秒</div>
+    <div class="pill small" id="slots">🏠 0/8</div>
+    <div class="pill small" id="lockInfo">🔓</div>
+  </div>
+  <div class="pill small" id="eventPill" style="display:none"></div>
+</div>
+<div id="hint" class="hidden"></div>
+<div id="alert"></div>
+<div id="toast"></div>
+<div id="joy"><div id="knob"></div></div>
+<button id="action"></button>
+<div id="items"></div>
+<button id="menuBtn">📖<small>メニュー</small></button>
+<div id="menu" class="hidden">
+  <div class="sheet">
+    <div class="sheetHead"><b>📖 メニュー</b><button id="menuClose">✕</button></div>
+    <div class="tabs">
+      <button class="tab on" data-tab="shop">🛒 ショップ</button>
+      <button class="tab" data-tab="dex">📖 ずかん</button>
+      <button class="tab" data-tab="rebirth">🔁 リバース</button>
+      <button class="tab" data-tab="stats">📊 記録</button>
+    </div>
+    <div class="list" id="menuList"></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from '../lib/three.min.js';
+await window.gateReady;   // パスワードが通るまで待つ
+
+// =====================================================================
+//  データ
+// =====================================================================
+const SAVE_KEY = 'heist-save', MUTE_KEY = 'heist-muted', BEST_KEY = 'heist-best';
+const params = new URLSearchParams(location.search);
+const TEST = params.has('test');
+const TIME_SCALE = TEST ? +(params.get('speed') || 1) : 1;
+
+const RARITY = {
+  common: { name: 'ふつう',     color: '#d7dde6', weight: 60 },
+  rare:   { name: 'レア',       color: '#4fb8ff', weight: 25 },
+  epic:   { name: 'エピック',   color: '#c08cff', weight: 10 },
+  legend: { name: 'レジェンド', color: '#ffcf3f', weight: 3.8 },
+  mythic: { name: 'ミシック',   color: '#ff5a5a', weight: 1 },
+  secret: { name: 'ひみつ',     color: 'rainbow', weight: 0.2 },
+};
+const RARITY_ORDER = ['common', 'rare', 'epic', 'legend', 'mythic', 'secret'];
+// ヘンテコたち（全部オリジナル）
+const SPECIES = [
+  { id: 'potepote', name: 'ポテポテ',           r: 'common', inc: 1,    price: 25,     color: 0xb58a5a },
+  { id: 'koppun',   name: 'コップン',           r: 'common', inc: 2,    price: 60,     color: 0xf4f4f4 },
+  { id: 'donut',    name: 'ドーナツマン',       r: 'common', inc: 3,    price: 95,     color: 0xff9fc6 },
+  { id: 'toast',    name: 'トーストン',         r: 'rare',   inc: 10,   price: 320,    color: 0xf2d29b },
+  { id: 'kasa',     name: 'カサオバケ',         r: 'rare',   inc: 14,   price: 480,    color: 0x8a5cd1 },
+  { id: 'penguin',  name: 'ロケットペンギン',   r: 'epic',   inc: 45,   price: 1500,   color: 0x2b2b3a },
+  { id: 'sabo',     name: 'トゲトゲサボ',       r: 'epic',   inc: 70,   price: 2500,   color: 0x4caf50 },
+  { id: 'tako',     name: 'ウチュウタコ',       r: 'legend', inc: 250,  price: 9000,   color: 0xb05ce6 },
+  { id: 'nasu',     name: 'キングナス',         r: 'legend', inc: 380,  price: 15000,  color: 0x5b2a86 },
+  { id: 'namazu',   name: 'ギャラクシーナマズ', r: 'mythic', inc: 1500, price: 60000,  color: 0x1e2a6e },
+  { id: 'burger',   name: 'バーガードラゴン',   r: 'mythic', inc: 2500, price: 110000, color: 0xd9a05b },
+  { id: 'nyan',     name: 'ムゲンにゃん',       r: 'secret', inc: 9000, price: 450000, color: 0xffffff },
+];
+const SP = Object.fromEntries(SPECIES.map(s => [s.id, s]));
+const VARIANTS = {
+  normal:  { name: '',         mult: 1, mark: '' },
+  gold:    { name: 'ゴールド', mult: 2, mark: '✨' },
+  rainbow: { name: 'にじいろ', mult: 5, mark: '🌈' },
+  snow:    { name: 'ゆき',     mult: 3, mark: '❄️' },   // ゆきまつり限定
+};
+// ===== ショップ =====
+const ITEMS_DEF = {
+  banana: { icon: '🍌', name: 'バナナのかわ', price: 300, desc: '足元に置く。ふんだボットは転んで、持ってるヘンテコを落とす' },
+  bubble: { icon: '🫧', name: 'あわバリア',   price: 500, desc: '12秒間、ボットにつかまらない' },
+  warp:   { icon: '🌀', name: 'ワープ石',     price: 800, desc: '一瞬で自分の基地へワープ（運んでるヘンテコごと）' },
+};
+const UPGRADES = [
+  { id: 'shoes',    icon: '👟', name: 'ジェットシューズ', costs: [200, 1500, 8000],     desc: (lv) => `歩くのが速くなる（+${12 * (lv + 1)}%）` },
+  { id: 'expand',   icon: '🏠', name: '基地をひろげる',   costs: [5000],                desc: () => '台が 8 → 10 になる' },
+  { id: 'lock',     icon: '🔒', name: 'つよいロック',     costs: [800, 6000],           desc: (lv) => `ロックの時間 ${LOCK_TIMES[lv]}秒 → ${LOCK_TIMES[lv + 1]}秒` },
+  { id: 'luck',     icon: '🍀', name: 'ラッキーお守り',   costs: [1000, 8000, 40000],   desc: () => 'レアなヘンテコが来やすくなる' },
+  { id: 'pedestal', icon: '💎', name: 'ピカピカ台座',     costs: [2500, 20000, 120000], desc: (lv) => `かせぎ ×${(1 + 0.25 * (lv + 1)).toFixed(2)}` },
+];
+const LOCK_TIMES = [45, 65, 90];
+// ===== イベント =====
+const EVENTS = [
+  { id: 'rainbow', name: '🌈 にじいろフィーバー', desc: '色ちがいのヘンテコがたくさん来る！', dur: 75, sky: 0xd9c2ff },
+  { id: 'rare',    name: '⭐ レアラッシュ',       desc: 'レアなヘンテコが出やすい！',         dur: 75, sky: 0xffe9a8 },
+  { id: 'golden',  name: '💰 ゴールデンタイム',   desc: 'かせぎが2倍！',                      dur: 60, sky: 0xffd77a },
+  { id: 'snow',    name: '❄️ ゆきまつり',         desc: '限定の❄️ゆきヘンテコ（×3）が来る！', dur: 90, sky: 0xdff2ff },
+  { id: 'peace',   name: '🕊️ へいわタイム',       desc: 'どろぼうが来ない＆運ぶのが速い！',   dur: 60, sky: 0xc8f5d8 },
+  { id: 'parade',  name: '🐲 ボスパレード',       desc: 'すごいヘンテコがやってくる！',       dur: 45, sky: 0xffb3a8 },
+];
+const SLOTS_PER_BASE = 8;
+const slotLimit = () => SLOTS_PER_BASE + (save.shop.expand ? 2 : 0);
+
+// =====================================================================
+//  セーブ
+// =====================================================================
+const save = { money: 50, rebirths: 0, slots: [], dex: {}, earned: 0, steals: 0, stolen: 0, caught: 0, bought: 0, tutorial: 0, last: 0,
+  shop: { shoes: 0, expand: 0, lock: 0, luck: 0, pedestal: 0 }, items: { banana: 0, bubble: 0, warp: 0 }, events: 0, slipped: 0 };
+try {
+  const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+  if (s) { const d = { shop: save.shop, items: save.items }; Object.assign(save, s); save.shop = Object.assign(d.shop, s.shop); save.items = Object.assign(d.items, s.items); }
+} catch (e) {}
+const incomeMult = () => 1 + save.rebirths * 0.5;
+const rebirthCost = () => 50000 * Math.pow(3, save.rebirths);
+function writeSave() {
+  save.slots = playerBase ? playerBase.slots.map(sl => sl.cr ? { sp: sl.cr.sp.id, v: sl.cr.variant, acc: Math.floor(sl.acc) } : (sl.reserved && sl.reservedCr ? { sp: sl.reservedCr.sp.id, v: sl.reservedCr.variant, acc: 0 } : null)) : save.slots;
+  save.last = Date.now();
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0;
+    if (save.earned > best) localStorage.setItem(BEST_KEY, String(Math.floor(save.earned)));
+  } catch (e) {}
+}
+function discover(cr) {
+  const d = save.dex[cr.sp.id] || (save.dex[cr.sp.id] = []);
+  if (!d.includes(cr.variant)) { d.push(cr.variant); return true; }
+  return false;
+}
+const fmt = (n) => {
+  n = Math.floor(n);
+  if (n >= 1e8) return (n / 1e8).toFixed(1).replace(/\.0$/, '') + '億';
+  if (n >= 1e4) return (n / 1e4).toFixed(n >= 1e6 ? 0 : 1).replace(/\.0$/, '') + '万';
+  return String(n);
+};
+
+// =====================================================================
+//  サウンド
+// =====================================================================
+let audio = null, muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+const muteBtn = document.getElementById('muteBtn');
+const showMute = () => { muteBtn.textContent = muted ? '🔇' : '🔊'; };
+showMute();
+muteBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); muted = !muted; try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (err) {} showMute(); });
+document.getElementById('backBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); writeSave(); location.href = '../'; });
+function initAudio() {
+  if (!audio) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); }
+  if (audio && audio.state === 'suspended') audio.resume();
+}
+function beep(freq, dur, type = 'sine', vol = 0.12, slideTo = null, delay = 0) {
+  if (!audio || muted) return;
+  const t = audio.currentTime + delay;
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const sfx = {
+  buy()    { beep(880, 0.08, 'triangle', 0.1); beep(1320, 0.15, 'triangle', 0.1, null, 0.08); },
+  coin()   { beep(1000 + Math.random() * 400, 0.06, 'sine', 0.07); },
+  steal()  { beep(300, 0.08, 'square', 0.07, 600); beep(600, 0.1, 'square', 0.07, 900, 0.08); },
+  place()  { [523, 659, 784].forEach((f, i) => beep(f, 0.12, 'triangle', 0.1, null, i * 0.07)); },
+  caught() { beep(400, 0.3, 'sawtooth', 0.08, 120); },
+  alarm()  { for (let i = 0; i < 4; i++) beep(i % 2 ? 700 : 950, 0.12, 'square', 0.06, null, i * 0.14); },
+  lock()   { beep(300, 0.1, 'square', 0.08); beep(200, 0.2, 'square', 0.08, null, 0.1); },
+  sell()   { beep(700, 0.1, 'triangle', 0.08, 400); },
+  rare()   { [523, 659, 784, 1046, 1318].forEach((f, i) => beep(f, 0.18, 'triangle', 0.1, null, i * 0.08)); },
+};
+
+// =====================================================================
+//  three.js
+// =====================================================================
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xa8e0ff);
+scene.fog = new THREE.Fog(0xa8e0ff, 34, 70);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 150);
+const CAM_OFFSET = new THREE.Vector3(0, 15, 12);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6a9a5a, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 });
+scene.add(sun, sun.target);
+function resize() {
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.fov = camera.aspect < 0.7 ? 58 : 48;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize); resize();
+// iPhoneのSafariは下のバーで画面の高さが変わるので、こまめに合わせる
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+{ let lw = 0, lh = 0; setInterval(() => { if (window.innerWidth !== lw || window.innerHeight !== lh) { lw = window.innerWidth; lh = window.innerHeight; resize(); } }, 500); }
+
+const matCache = {};
+const mat = (color, extra) => extra ? new THREE.MeshLambertMaterial({ color, ...extra }) : (matCache[color] || (matCache[color] = new THREE.MeshLambertMaterial({ color })));
+const goldMat = new THREE.MeshLambertMaterial({ color: 0xffd34d, emissive: 0x553300 });
+const rainbowMat = new THREE.MeshLambertMaterial({ color: 0xff0000, emissive: 0x222222 });
+const snowMat = new THREE.MeshLambertMaterial({ color: 0xe6f6ff, emissive: 0x24384a });
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+function mesh(geo, m, shadow = false) { const o = new THREE.Mesh(geo, m); o.castShadow = shadow; o.receiveShadow = shadow; return o; }
+const box = (w, h, d, m, sh = true) => mesh(new THREE.BoxGeometry(w, h, d), m, sh);
+const sphere = (r, m, seg = 12, sh = false) => mesh(new THREE.SphereGeometry(r, seg, Math.max(6, seg - 4)), m, sh);
+const cyl = (rt, rb, h, m, seg = 12, sh = false) => mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m, sh);
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'));
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+// ===== アニメーションの道具 =====
+const tweens = [];
+function tween(dur, fn, done, delay = 0) { tweens.push({ t: -delay, dur, fn, done }); }
+const easeOutBack = (p) => 1 + 2.70158 * Math.pow(p - 1, 3) + 1.70158 * Math.pow(p - 1, 2);
+const easeInOut = (p) => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+function popIn(obj, s = 1, dur = 0.45, delay = 0) { obj.scale.setScalar(0.001); tween(dur, (p) => obj.scale.setScalar(Math.max(0.001, easeOutBack(p) * s)), null, delay); }
+function floatText(text, pos, { color = '#ffffff', stroke = '#3a2a1a', size = 1, dur = 1.3, rise = 1.4 } = {}) {
+  const tex = canvasTex(512, 128, (g) => {
+    g.font = '900 72px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineWidth = 14; g.strokeStyle = stroke; g.strokeText(text, 256, 68); g.fillStyle = color; g.fillText(text, 256, 68);
+  });
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sp.renderOrder = 30; sp.scale.set(3 * size, 0.75 * size, 1); sp.position.copy(pos); scene.add(sp);
+  const y0 = pos.y;
+  tween(dur, (p) => { sp.position.y = y0 + easeOutBack(Math.min(1, p * 1.5)) * rise * 0.6 + p * rise * 0.4; sp.material.opacity = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3; },
+    () => { scene.remove(sp); tex.dispose(); sp.material.dispose(); });
+}
+const confettiGeo = new THREE.PlaneGeometry(0.16, 0.24);
+const confettiMats = [0xff5a5a, 0xffcf3f, 0x4fb8ff, 0x5fd16a, 0xb67cff, 0xff8fd0].map(c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
+const confetti = [];
+function burst(pos, n = 40, power = 5) {
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(confettiGeo, confettiMats[i % confettiMats.length]); m.position.copy(pos);
+    const a = Math.random() * Math.PI * 2, s = power * (0.4 + Math.random() * 0.6);
+    confetti.push({ m, vx: Math.cos(a) * s * 0.5, vy: s * (0.8 + Math.random() * 0.6), vz: Math.sin(a) * s * 0.5, r: Math.random() * 10, life: 1.8, t: 0 });
+    scene.add(m);
+  }
+}
+let camShake = 0;
+
+// =====================================================================
+//  ヘンテコの見た目
+// =====================================================================
+function eyes(g, y, z, spread = 0.13, r = 0.07, n = 2) {
+  for (let i = 0; i < n; i++) {
+    const x = n === 1 ? 0 : (i - (n - 1) / 2) * spread * 2;
+    const w = sphere(r * 1.35, mat(0xffffff), 10); w.position.set(x, y, z); g.add(w);
+    const b = sphere(r * 0.75, mat(0x1b1b1b), 8); b.position.set(x, y, z + r * 0.8); g.add(b);
+  }
+}
+function legs(g, m, y = 0.12, spread = 0.18) { for (const s of [-1, 1]) { const l = cyl(0.06, 0.06, y * 2, m, 6); l.position.set(s * spread, y, 0); g.add(l); const f = sphere(0.09, m, 6); f.scale.set(1, 0.6, 1.4); f.position.set(s * spread, 0.04, 0.05); g.add(f); } }
+function arms(g, m, y, spread, len = 0.3) { for (const s of [-1, 1]) { const a = cyl(0.045, 0.045, len, m, 6); a.rotation.z = s * 1.0; a.position.set(s * spread, y, 0); g.add(a); const h = sphere(0.07, m, 6); h.position.set(s * (spread + len * 0.42), y + len * 0.27, 0); g.add(h); } }
+function buildCreature(spId, variant) {
+  const sp = SP[spId];
+  const g = new THREE.Group();
+  const inner = new THREE.Group(); g.add(inner);
+  const main = variant === 'gold' ? goldMat : variant === 'rainbow' ? rainbowMat : variant === 'snow' ? snowMat : mat(sp.color);
+  const legM = mat(0x5a4636);
+  const add = (o) => { inner.add(o); return o; };
+  switch (spId) {
+    case 'potepote': {
+      const b = add(sphere(0.45, main, 14, true)); b.scale.set(1, 0.85, 0.9); b.position.y = 0.5;
+      for (const [x, y] of [[0.2, 0.7], [-0.25, 0.45], [0.05, 0.3]]) { const sp2 = add(sphere(0.06, mat(0x8a6440), 6)); sp2.position.set(x, y, 0.36); }
+      eyes(inner, 0.62, 0.36); legs(inner, legM, 0.1);
+      break;
+    }
+    case 'koppun': {
+      const b = add(cyl(0.38, 0.3, 0.8, main, 16, true)); b.position.y = 0.55;
+      const c = add(cyl(0.34, 0.34, 0.04, mat(0x6b3a1f), 16)); c.position.y = 0.94;
+      const h = add(mesh(new THREE.TorusGeometry(0.16, 0.05, 6, 12), main)); h.position.set(0.42, 0.6, 0);
+      eyes(inner, 0.65, 0.34); legs(inner, legM, 0.08);
+      break;
+    }
+    case 'donut': {
+      const b = add(mesh(new THREE.TorusGeometry(0.36, 0.18, 10, 20), mat(0xe8b36a), true)); b.position.y = 0.6;
+      const icing = add(mesh(new THREE.TorusGeometry(0.36, 0.185, 10, 20, Math.PI), main)); icing.position.y = 0.6;
+      for (let i = 0; i < 8; i++) { const s = add(box(0.06, 0.02, 0.02, mat([0xffffff, 0x4fb8ff, 0xffe14d, 0x5fd16a][i % 4]), false)); const a = i / 8 * Math.PI; s.position.set(Math.cos(a) * 0.36, 0.6 + Math.sin(a) * 0.36, 0.17); s.rotation.z = a * 3; }
+      eyes(inner, 0.86, 0.12, 0.1, 0.06); legs(inner, legM, 0.12); arms(inner, legM, 0.55, 0.5, 0.25);
+      break;
+    }
+    case 'toast': {
+      const crust = add(box(0.9, 0.95, 0.24, mat(0xc98b52))); crust.position.set(0, 0.62, -0.03);
+      const b = add(box(0.78, 0.83, 0.26, main)); b.position.y = 0.6;
+      eyes(inner, 0.72, 0.14);
+      for (const s of [-1, 1]) { const m = add(sphere(0.08, mat(0x4a2c16), 6)); m.scale.set(1.6, 0.6, 0.6); m.position.set(s * 0.09, 0.52, 0.15); }
+      legs(inner, legM, 0.1); arms(inner, legM, 0.55, 0.48);
+      break;
+    }
+    case 'kasa': {
+      const top = add(cyl(0.02, 0.62, 0.55, main, 10, true)); top.position.y = 1.15;
+      const rim = add(cyl(0.62, 0.62, 0.05, main, 10)); rim.position.y = 0.88;
+      const pole = add(cyl(0.05, 0.05, 0.7, mat(0x6b4a2a), 6)); pole.position.y = 0.5;
+      eyes(inner, 1.05, 0.42, 0, 0.11, 1);
+      const tongue = add(sphere(0.09, mat(0xff5a7a), 8)); tongue.scale.set(1, 0.5, 1.6); tongue.position.set(0, 0.92, 0.5);
+      const foot = add(sphere(0.12, legM, 8)); foot.scale.set(1, 0.5, 1.5); foot.position.y = 0.06;
+      break;
+    }
+    case 'penguin': {
+      const b = add(mesh(new THREE.CapsuleGeometry(0.36, 0.5, 6, 14), main, true)); b.position.y = 0.72;
+      const belly = add(sphere(0.3, mat(0xffffff), 12)); belly.scale.set(0.9, 1.2, 0.5); belly.position.set(0, 0.62, 0.22);
+      const beak = add(cyl(0, 0.08, 0.18, mat(0xffa02a), 6)); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.92, 0.42);
+      eyes(inner, 1.04, 0.3, 0.12, 0.06);
+      for (const s of [-1, 1]) { const w = add(sphere(0.2, main, 8)); w.scale.set(0.3, 1, 0.6); w.position.set(s * 0.4, 0.7, 0); w.rotation.z = s * 0.4; }
+      const flame = add(cyl(0.15, 0, 0.5, new THREE.MeshBasicMaterial({ color: 0xff8a2a }), 8)); flame.position.set(0, 0.35, -0.42); flame.rotation.x = -0.9;
+      g.userData.flame = flame;
+      break;
+    }
+    case 'sabo': {
+      const b = add(mesh(new THREE.CapsuleGeometry(0.3, 0.8, 6, 12), main, true)); b.position.y = 0.75;
+      for (const s of [-1, 1]) { const a = add(mesh(new THREE.CapsuleGeometry(0.12, 0.3, 4, 8), main)); a.position.set(s * 0.4, 0.85, 0); }
+      for (let i = 0; i < 12; i++) { const sp2 = add(cyl(0, 0.03, 0.1, mat(0xfff7d6), 4)); const a = i * 2.1; sp2.position.set(Math.cos(a) * 0.3, 0.4 + (i % 6) * 0.15, Math.sin(a) * 0.3); sp2.rotation.z = -Math.cos(a) * 1.5; sp2.rotation.x = Math.sin(a) * 1.5; }
+      const fl = add(sphere(0.12, mat(0xff6fa8), 8)); fl.position.y = 1.32;
+      eyes(inner, 0.95, 0.27, 0.11, 0.06);
+      break;
+    }
+    case 'tako': {
+      const b = add(sphere(0.45, main, 14, true)); b.position.y = 0.85;
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; const t = add(mesh(new THREE.CapsuleGeometry(0.07, 0.4, 4, 6), main)); t.position.set(Math.cos(a) * 0.3, 0.3, Math.sin(a) * 0.3); t.rotation.z = Math.cos(a) * 0.5; t.rotation.x = -Math.sin(a) * 0.5; }
+      const helmet = add(sphere(0.62, new THREE.MeshLambertMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.3 }), 16)); helmet.position.y = 0.85;
+      const ant = add(cyl(0.02, 0.02, 0.35, mat(0xcccccc), 4)); ant.position.y = 1.55;
+      const ball = add(sphere(0.07, new THREE.MeshBasicMaterial({ color: 0xff4a4a }), 8)); ball.position.y = 1.75;
+      eyes(inner, 0.95, 0.38, 0.14, 0.07);
+      break;
+    }
+    case 'nasu': {
+      const b = add(mesh(new THREE.CapsuleGeometry(0.38, 0.45, 6, 14), main, true)); b.position.y = 0.72; b.rotation.z = 0.12;
+      const cal = add(cyl(0.3, 0.05, 0.2, mat(0x3f8f3a), 8)); cal.position.y = 1.22; cal.rotation.x = Math.PI;
+      const crown = add(cyl(0.2, 0.24, 0.18, goldMat, 8)); crown.position.y = 1.38;
+      for (let i = 0; i < 5; i++) { const s = add(cyl(0, 0.05, 0.14, goldMat, 4)); const a = i / 5 * Math.PI * 2; s.position.set(Math.cos(a) * 0.19, 1.53, Math.sin(a) * 0.19); }
+      eyes(inner, 0.92, 0.34, 0.13, 0.065);
+      for (const s of [-1, 1]) { const m = add(mesh(new THREE.TorusGeometry(0.09, 0.025, 6, 10, Math.PI * 1.3), mat(0xffffff))); m.position.set(s * 0.1, 0.76, 0.38); m.rotation.z = s > 0 ? -0.6 : Math.PI + 0.6; }
+      break;
+    }
+    case 'namazu': {
+      const b = add(sphere(0.45, main, 16, true)); b.scale.set(0.8, 0.7, 1.6); b.position.y = 0.7;
+      const tail = add(cyl(0, 0.35, 0.5, main, 4)); tail.rotation.x = -Math.PI / 2; tail.position.set(0, 0.7, -0.85);
+      for (let i = 0; i < 10; i++) { const s = add(sphere(0.04, new THREE.MeshBasicMaterial({ color: 0xfff27a }), 5)); s.position.set((Math.random() - 0.5) * 0.6, 0.6 + Math.random() * 0.35, (Math.random() - 0.5) * 1.2); }
+      for (const s of [-1, 1]) { const w = add(cyl(0.012, 0.012, 0.7, mat(0xffe680), 4)); w.rotation.z = s * 1.2; w.position.set(s * 0.35, 0.6, 0.6); }
+      const halo = add(mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 20), new THREE.MeshBasicMaterial({ color: 0xfff27a }))); halo.rotation.x = Math.PI / 2; halo.position.y = 1.3;
+      eyes(inner, 0.85, 0.62, 0.18, 0.07);
+      break;
+    }
+    case 'burger': {
+      const layers = [[0.45, 0.18, 0xd9a05b, 0.12], [0.48, 0.12, 0x6b3a1f, 0.28], [0.5, 0.04, 0xffd23a, 0.36], [0.5, 0.05, 0x5fd16a, 0.41]];
+      for (const [r, h, c, y] of layers) { const l = add(cyl(r, r, h, variant === 'normal' ? mat(c) : main, 16, true)); l.position.y = y + h / 2; }
+      const bun = add(sphere(0.46, variant === 'normal' ? mat(0xe0a860) : main, 14, true)); bun.scale.y = 0.65; bun.position.y = 0.48;
+      for (const s of [-1, 1]) { const h = add(cyl(0, 0.07, 0.3, mat(0xffffff), 6)); h.position.set(s * 0.22, 0.85, 0); h.rotation.z = -s * 0.4; }
+      for (const s of [-1, 1]) { const w = add(box(0.5, 0.04, 0.3, mat(0xe8524a), false)); w.position.set(s * 0.65, 0.6, -0.05); w.rotation.z = s * 0.5; }
+      const tail = add(cyl(0, 0.12, 0.6, mat(0xe8524a), 6)); tail.rotation.x = -1.2; tail.position.set(0, 0.35, -0.5);
+      eyes(inner, 0.7, 0.36, 0.14, 0.07);
+      break;
+    }
+    case 'nyan': {
+      const b = add(box(0.75, 0.7, 0.7, variant === 'normal' ? rainbowMat : main)); b.position.y = 0.55;
+      for (const s of [-1, 1]) { const e = add(cyl(0, 0.16, 0.25, variant === 'normal' ? rainbowMat : main, 4)); e.position.set(s * 0.24, 1.0, 0); }
+      eyes(inner, 0.62, 0.36, 0.15, 0.08);
+      for (const s of [-1, 1]) for (const k of [-1, 1]) { const w = add(cyl(0.01, 0.01, 0.4, mat(0x333333), 4)); w.rotation.z = Math.PI / 2 + k * 0.15; w.position.set(s * 0.45, 0.48 + k * 0.04, 0.36); }
+      const halo = add(mesh(new THREE.TorusGeometry(0.28, 0.04, 6, 20), new THREE.MeshBasicMaterial({ color: 0xfff27a }))); halo.rotation.x = Math.PI / 2; halo.position.y = 1.3;
+      const tail = add(cyl(0.05, 0.05, 0.6, variant === 'normal' ? rainbowMat : main, 6)); tail.position.set(0, 0.7, -0.45); tail.rotation.x = -0.6;
+      break;
+    }
+  }
+  if (variant !== 'normal') {
+    const glow = sphere(0.9, new THREE.MeshBasicMaterial({ color: variant === 'gold' ? 0xffe066 : variant === 'snow' ? 0x9fdcff : 0xffffff, transparent: true, opacity: 0.15, depthWrite: false }), 12);
+    glow.position.y = 0.7; g.add(glow);
+  }
+  g.userData.inner = inner;
+  g.userData.phase = Math.random() * 10;
+  return g;
+}
+const RAINBOW = (t) => new THREE.Color().setHSL((t * 0.25) % 1, 0.8, 0.6);
+
+// 名前・値段の札
+function labelTexture(cr, mode, value) {
+  const sp = cr.sp, rr = RARITY[sp.r], v = VARIANTS[cr.variant];
+  return canvasTex(512, 220, (g) => {
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(20,20,40,0.72)'; g.beginPath(); g.roundRect(6, 6, 500, 208, 30); g.fill();
+    if (rr.color === 'rainbow') { const gr = g.createLinearGradient(40, 0, 470, 0); ['#ff5a5a', '#ffcf3f', '#5fd16a', '#4fb8ff', '#c08cff'].forEach((c, i) => gr.addColorStop(i / 4, c)); g.fillStyle = gr; }
+    else g.fillStyle = rr.color;
+    g.font = '900 34px -apple-system, "Hiragino Sans", sans-serif';
+    g.fillText(`${v.mark}${rr.name}${v.name ? '・' + v.name : ''}`, 256, 42);
+    g.fillStyle = '#ffffff'; g.font = '900 50px -apple-system, "Hiragino Sans", sans-serif';
+    let size = 50; while (g.measureText(sp.name).width > 470 && size > 26) { size -= 4; g.font = `900 ${size}px -apple-system, "Hiragino Sans", sans-serif`; }
+    g.fillText(sp.name, 256, 100);
+    g.font = '900 44px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif';
+    if (mode === 'shop') { g.fillStyle = '#ffe066'; g.fillText(`💰${fmt(crPrice(cr))}  ⏱+${fmt(crIncome(cr))}/秒`, 256, 168); }
+    else if (mode === 'acc') { g.fillStyle = '#9dff7a'; g.fillText(`💰${fmt(value)}`, 256, 168); }
+    else { g.fillStyle = '#ffd9a0'; g.fillText(`+${fmt(crIncome(cr))}/秒`, 256, 168); }
+  });
+}
+const playerMult = () => incomeMult() * (1 + 0.25 * save.shop.pedestal) * (eventIs('golden') ? 2 : 1);
+const crIncome = (cr) => cr.sp.inc * VARIANTS[cr.variant].mult * (cr.owner === 'player' || !cr.owner ? playerMult() : 1);
+const crPrice = (cr) => cr.sp.price * VARIANTS[cr.variant].mult;
+function makeCr(spId, variant) {
+  const cr = { sp: SP[spId], variant, obj: buildCreature(spId, variant), owner: null, label: null, labelKey: '' };
+  cr.label = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+  cr.label.renderOrder = 15; cr.label.scale.set(2.2, 0.95, 1); cr.label.position.y = 2.3;
+  cr.obj.add(cr.label);
+  return cr;
+}
+function setLabel(cr, mode, value = 0) {
+  const key = mode + ':' + (mode === 'acc' ? fmt(value) : '') + ':' + incomeMult();
+  if (cr.labelKey === key) return;
+  cr.labelKey = key;
+  if (cr.label.material.map) cr.label.material.map.dispose();
+  cr.label.material.map = labelTexture(cr, mode, value);
+  cr.label.material.needsUpdate = true;
+}
+function rollSpecies(bonus = 0) {
+  let total = 0; const w = RARITY_ORDER.map((r, i) => { const x = RARITY[r].weight * (i > 0 ? 1 + bonus * i : 1); total += x; return x; });
+  let r = Math.random() * total, ri = 0;
+  for (; ri < w.length - 1; ri++) { if (r < w[ri]) break; r -= w[ri]; }
+  const list = SPECIES.filter(s => s.r === RARITY_ORDER[ri]);
+  return list[Math.floor(Math.random() * list.length)].id;
+}
+function rollVariant() {
+  if (eventIs('snow') && Math.random() < 0.35) return 'snow';
+  const boost = eventIs('rainbow') ? 6 : 1;
+  const r = Math.random();
+  return r < 0.006 * boost * 1.5 ? 'rainbow' : r < 0.046 * boost ? 'gold' : 'normal';
+}
+const carpetBonus = () => save.rebirths * 0.15 + save.shop.luck * 0.25 + (eventIs('rare') ? 1.5 : 0) + (eventIs('parade') ? 0.8 : 0);
+
+// =====================================================================
+//  マップ
+// =====================================================================
+const ground = mesh(new THREE.PlaneGeometry(120, 120), mat(0x8fd36e), true);
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+// じゅうたん（ベルトコンベア）
+const CARPET_Z0 = -34, CARPET_Z1 = 34;
+const carpetArrows = [];
+{
+  const c = mesh(new THREE.PlaneGeometry(3.2, CARPET_Z1 - CARPET_Z0), mat(0xd8384a), true);
+  c.rotation.x = -Math.PI / 2; c.position.set(0, 0.02, 0); scene.add(c);
+  for (const s of [-1, 1]) { const e = box(0.25, 0.12, CARPET_Z1 - CARPET_Z0, mat(0xffc93c)); e.position.set(s * 1.72, 0.06, 0); scene.add(e); }
+  // 流れる矢印
+  for (let z = CARPET_Z0 + 2; z < CARPET_Z1; z += 4) {
+    const a = mesh(new THREE.ConeGeometry(0.4, 0.8, 3), new THREE.MeshBasicMaterial({ color: 0xff8a9a })); a.rotation.x = Math.PI / 2; a.rotation.z = Math.PI; a.scale.z = 0.05;
+    a.position.set(0, 0.04, z); scene.add(a); carpetArrows.push(a);
+  }
+}
+// 木とかざり
+for (let i = 0; i < 26; i++) {
+  const x = (Math.random() < 0.5 ? -1 : 1) * (22 + Math.random() * 12), z = (Math.random() - 0.5) * 70;
+  const t = cyl(0.18, 0.24, 1.4, mat(0x7a5232), 6, true); t.position.set(x, 0.7, z);
+  const l = sphere(1 + Math.random() * 0.5, mat(0x3d8f3a), 9, true); l.position.set(x, 2, z);
+  scene.add(t, l);
+}
+
+// ===== 基地 =====
+const bases = [];
+const BASE_DEF = [
+  { owner: 'player', name: 'あなた',   color: 0x6ab0e8, cx: -13, cz: 9 },
+  { owner: 'bot0',   name: 'タヌキチ', color: 0xc99a6a, cx: -13, cz: -13 },
+  { owner: 'bot1',   name: 'ミケ',     color: 0xffa36b, cx: 13,  cz: 9 },
+  { owner: 'bot2',   name: 'ゴロウ',   color: 0x8fa6d8, cx: 13,  cz: -13 },
+];
+const HALF_X = 4.6, HALF_Z = 6.2, GATE_HALF = 1.8;
+function makeBase(def) {
+  const b = Object.assign({}, def, { e: def.cx < 0 ? 1 : -1, slots: [], lockUntil: 0, group: new THREE.Group(), walls: [] });
+  b.w = (lx, lz) => V(b.cx + b.e * lx, 0, b.cz + lz);
+  const floor = mesh(new THREE.BoxGeometry(HALF_X * 2, 0.16, HALF_Z * 2), mat(def.color), true); floor.position.set(b.cx, 0.08, b.cz); b.group.add(floor);
+  const inner = mesh(new THREE.PlaneGeometry(HALF_X * 2 - 0.8, HALF_Z * 2 - 0.8), mat(new THREE.Color(def.color).offsetHSL(0, 0, 0.08).getHex()));
+  inner.rotation.x = -Math.PI / 2; inner.position.set(b.cx, 0.17, b.cz); b.group.add(inner);
+  // かべ
+  const wallM = mat(0xf7f2e8);
+  const addWall = (lx1, lz1, lx2, lz2) => {
+    const p1 = b.w(lx1, lz1), p2 = b.w(lx2, lz2);
+    const x1 = Math.min(p1.x, p2.x) - 0.15, x2 = Math.max(p1.x, p2.x) + 0.15, z1 = Math.min(p1.z, p2.z) - 0.15, z2 = Math.max(p1.z, p2.z) + 0.15;
+    const w = box(x2 - x1, 1.2, z2 - z1, wallM); w.position.set((x1 + x2) / 2, 0.6, (z1 + z2) / 2); b.group.add(w);
+    b.walls.push({ x1, x2, z1, z2 });
+  };
+  addWall(-HALF_X, -HALF_Z, -HALF_X, HALF_Z);
+  addWall(-HALF_X, -HALF_Z, HALF_X, -HALF_Z);
+  addWall(-HALF_X, HALF_Z, HALF_X, HALF_Z);
+  addWall(HALF_X, -HALF_Z, HALF_X, -GATE_HALF);
+  addWall(HALF_X, GATE_HALF, HALF_X, HALF_Z);
+  // 看板
+  const signTex = canvasTex(512, 128, (g) => { g.fillStyle = '#' + new THREE.Color(def.color).getHexString(); g.fillRect(0, 0, 512, 128); g.fillStyle = '#fff'; g.font = '900 64px -apple-system, "Hiragino Sans", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(def.owner === 'player' ? '🏠 あなたの基地' : `${def.name}の基地`, 256, 68); });
+  const sign = mesh(new THREE.PlaneGeometry(4, 1), new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide }));
+  sign.position.copy(b.w(0, -HALF_Z)).setY(2.0); sign.position.z += 0.2; b.group.add(sign);
+  // ゲート（ロックするとレーザー）
+  const gp = b.w(HALF_X, 0);
+  b.gate = new THREE.Group();
+  for (let i = 0; i < 5; i++) {
+    const l = box(0.06, 1.6, 0.06, new THREE.MeshBasicMaterial({ color: 0xff3030 }), false);
+    l.position.set(gp.x, 0.8, gp.z - GATE_HALF + 0.3 + i * (GATE_HALF * 2 - 0.6) / 4); b.gate.add(l);
+  }
+  const wallPlane = mesh(new THREE.PlaneGeometry(GATE_HALF * 2, 1.6), new THREE.MeshBasicMaterial({ color: 0xff3030, transparent: true, opacity: 0.25, side: THREE.DoubleSide }));
+  wallPlane.rotation.y = Math.PI / 2; wallPlane.position.set(gp.x, 0.8, gp.z); b.gate.add(wallPlane);
+  b.gate.visible = false; b.group.add(b.gate);
+  b.gateBox = { x1: gp.x - 0.3, x2: gp.x + 0.3, z1: gp.z - GATE_HALF, z2: gp.z + GATE_HALF };
+  b.gateLabel = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false })); b.gateLabel.scale.set(2, 0.5, 1);
+  b.gateLabel.position.set(gp.x, 2.4, gp.z); b.gateLabel.visible = false; b.gateLabel.renderOrder = 16; b.group.add(b.gateLabel);
+  // ロックボタン
+  b.lockPos = b.w(HALF_X - 1.1, HALF_Z - 1.2);
+  const btnBase = cyl(0.55, 0.6, 0.14, mat(0x444444), 16, true); btnBase.position.copy(b.lockPos).setY(0.22); b.group.add(btnBase);
+  b.lockBtn = cyl(0.42, 0.42, 0.14, mat(0xff3b3b, { emissive: 0x330000 }), 16); b.lockBtn.position.copy(b.lockPos).setY(0.34); b.group.add(b.lockBtn);
+  const lockIcon = mesh(new THREE.PlaneGeometry(0.6, 0.6), new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, (g) => { g.font = '90px "Apple Color Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🔒', 64, 70); }), transparent: true }));
+  lockIcon.rotation.x = -Math.PI / 2; lockIcon.position.copy(b.lockPos).setY(0.42); b.group.add(lockIcon);
+  // 台（8こ）
+  let i = 0;
+  const spots = [];
+  for (const lx of [-3.0, 0.6]) for (const lz of [-4.8, -2.4, 2.4, 4.8]) spots.push([lx, lz, false]);
+  for (const lx of [-3.0, 0.6]) spots.push([lx, 0, true]);              // ひろげると使える台
+  for (const [lx, lz, extra] of spots) {
+    const pos = b.w(lx, lz), plate = b.w(lx + 1.45, lz);
+    const ped = cyl(0.62, 0.7, 0.3, extra ? new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 }) : mat(0xffffff), 16, true); ped.position.copy(pos).setY(0.3); b.group.add(ped);
+    const ring = mesh(new THREE.RingGeometry(0.38, 0.5, 24), new THREE.MeshBasicMaterial({ color: 0x5fd16a, transparent: true, opacity: 0.9 }));
+    ring.rotation.x = -Math.PI / 2; ring.position.copy(plate).setY(0.19);
+    if (def.owner === 'player') b.group.add(ring);
+    b.slots.push({ i: i++, pos, plate, ring, ped, extra, locked: extra, cr: null, acc: 0, reserved: false, reservedCr: null });
+    if (extra) ring.visible = false;
+  }
+  scene.add(b.group);
+  bases.push(b);
+  return b;
+}
+for (const d of BASE_DEF) makeBase(d);
+const playerBase = bases[0];
+const baseOf = (owner) => bases.find(b => b.owner === owner);
+const inBase = (b, p, margin = 0) => Math.abs(p.x - b.cx) < HALF_X - 0.2 + margin && Math.abs(p.z - b.cz) < HALF_Z - 0.2 + margin;
+const isLocked = (b) => b.lockUntil > elapsed;
+const freeSlot = (b) => b.slots.find(s => !s.cr && !s.reserved && !s.locked);
+function unlockExtraSlots(anim) {
+  for (const s of playerBase.slots) if (s.extra && s.locked) {
+    s.locked = false; s.ring.visible = true;
+    s.ped.material = mat(0xffffff);
+    if (anim) { popIn(s.ped, 1, 0.5); burst(s.pos.clone().setY(1), 30, 5); }
+  }
+}
+const usedSlots = (b) => b.slots.filter(s => s.cr || s.reserved).length;
+
+// ヘンテコを台に置く
+function placeOnSlot(b, slot, cr, anim = true) {
+  slot.cr = cr; slot.reserved = false; slot.reservedCr = null;
+  cr.owner = b.owner; cr.state = 'slot'; cr.slot = slot; cr.base = b;
+  if (cr.obj.parent !== scene) { scene.add(cr.obj); }
+  cr.obj.position.copy(slot.pos).setY(0.45);
+  cr.obj.rotation.y = b.e > 0 ? Math.PI / 2 : -Math.PI / 2;
+  cr.obj.scale.setScalar(1);
+  if (b.owner === 'player') setLabel(cr, 'acc', slot.acc); else setLabel(cr, 'inc');
+  if (anim) popIn(cr.obj, 1, 0.4);
+}
+function removeFromSlot(slot, keepReserved = false) {
+  const cr = slot.cr; slot.cr = null;
+  if (keepReserved) { slot.reserved = true; slot.reservedCr = cr; }
+  return cr;
+}
+
+// =====================================================================
+//  キャラクター（プレイヤー・ボット）
+// =====================================================================
+function makeCharacter(bodyColor, opts = {}) {
+  const g = new THREE.Group(); const inner = new THREE.Group(); g.add(inner);
+  const body = mesh(new THREE.CapsuleGeometry(0.42, 0.45, 6, 14), mat(bodyColor), true); body.position.y = 0.72; inner.add(body);
+  const belly = sphere(0.3, mat(0xffffff), 12); belly.scale.set(1, 1.1, 0.5); belly.position.set(0, 0.6, 0.27); inner.add(belly);
+  for (const sx of [-0.15, 0.15]) { const e = sphere(0.065, mat(0x222222), 8); e.position.set(sx, 1.0, 0.38); inner.add(e); const sh = sphere(0.02, mat(0xffffff), 6); sh.position.set(sx + 0.02, 1.03, 0.44); inner.add(sh); }
+  for (const sx of [-0.27, 0.27]) { const ch = sphere(0.06, mat(0xff9aa8), 8); ch.scale.z = 0.4; ch.position.set(sx, 0.88, 0.34); inner.add(ch); }
+  if (opts.ears) for (const sx of [-0.25, 0.25]) { const ear = cyl(0, 0.15, 0.25, mat(opts.ears), 4); ear.position.set(sx, 1.28, 0); inner.add(ear); }
+  if (opts.mask) { const m = box(0.7, 0.16, 0.1, mat(0x222222), false); m.position.set(0, 1.0, 0.36); inner.add(m); for (const sx of [-0.15, 0.15]) { const e = sphere(0.06, mat(0xffffff), 8); e.position.set(sx, 1.0, 0.42); inner.add(e); } }
+  if (opts.cap) { const c = cyl(0.36, 0.42, 0.18, mat(opts.cap), 16); c.position.y = 1.32; inner.add(c); const br = cyl(0.3, 0.3, 0.04, mat(opts.cap), 16); br.scale.z = 0.6; br.position.set(0, 1.25, 0.3); inner.add(br); }
+  const feet = [];
+  for (const sx of [-0.2, 0.2]) { const f = sphere(0.14, mat(0x444444), 8); f.scale.set(1, 0.6, 1.3); f.position.set(sx, 0.08, 0.05); g.add(f); feet.push(f); }
+  g.userData = { inner, feet };
+  return g;
+}
+function animateChar(ch, moving, t) {
+  const u = ch.userData;
+  if (moving) { u.inner.position.y = Math.abs(Math.sin(t * 12)) * 0.08; u.inner.rotation.z = Math.sin(t * 12) * 0.06; u.feet[0].position.z = 0.05 + Math.sin(t * 12) * 0.15; u.feet[1].position.z = 0.05 - Math.sin(t * 12) * 0.15; }
+  else { u.inner.position.y = Math.sin(t * 3) * 0.02; u.inner.rotation.z *= 0.8; u.feet[0].position.z = u.feet[1].position.z = 0.05; }
+}
+function animateCreature(cr, t, moving) {
+  const u = cr.obj.userData, p = t + u.phase;
+  u.inner.position.y = moving ? Math.abs(Math.sin(p * 9)) * 0.12 : Math.sin(p * 2.5) * 0.04;
+  u.inner.rotation.z = moving ? Math.sin(p * 9) * 0.1 : Math.sin(p * 1.7) * 0.05;
+  u.inner.scale.y = moving ? 1 : 1 + Math.sin(p * 2.5) * 0.03;
+  if (u.flame) u.flame.scale.setScalar(0.8 + Math.random() * 0.4);
+}
+
+const player = { obj: makeCharacter(0xffb347, { cap: 0x3a7bd5 }), pos: V(-8, 0, 9), dir: Math.PI / 2, moving: false, carry: null };
+scene.add(player.obj);
+
+const BOT_LOOKS = [{ color: 0xa0785a, opts: { ears: 0x7a5232, mask: true } }, { color: 0xfff1e0, opts: { ears: 0xffa36b } }, { color: 0x7aa0d8, opts: { cap: 0x333333 } }];
+const bots = [0, 1, 2].map(i => {
+  const b = bases[i + 1];
+  const obj = makeCharacter(BOT_LOOKS[i].color, BOT_LOOKS[i].opts);
+  const bot = { i, base: b, name: b.name, obj, pos: b.w(0, 0), path: [], state: 'home', timer: 2 + Math.random() * 3, moving: false, carry: null, money: 200, chase: 0, target: null, lockCd: 10 + Math.random() * 20 };
+  obj.position.copy(bot.pos);
+  const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: canvasTex(256, 64, (g) => { g.fillStyle = 'rgba(0,0,0,.5)'; g.beginPath(); g.roundRect(4, 4, 248, 56, 20); g.fill(); g.fillStyle = '#fff'; g.font = '900 36px -apple-system, "Hiragino Sans", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(b.name, 128, 34); }), transparent: true, depthTest: false }));
+  tag.scale.set(1.4, 0.35, 1); tag.position.y = 1.8; tag.renderOrder = 14; obj.add(tag);
+  bot.alertMark = mesh(new THREE.ConeGeometry(0.25, 0.5, 8), new THREE.MeshBasicMaterial({ color: 0xff3030 })); bot.alertMark.rotation.x = Math.PI; bot.alertMark.position.y = 2.4; bot.alertMark.visible = false; obj.add(bot.alertMark);
+  scene.add(obj);
+  return bot;
+});
+
+// =====================================================================
+//  じゅうたんのヘンテコ
+// =====================================================================
+const carpet = [];
+const CARPET_SPEED = 1.8;
+function spawnCarpet(z = CARPET_Z0, forceSp = null) {
+  const cr = makeCr(forceSp || rollSpecies(carpetBonus()), rollVariant());
+  cr.state = 'carpet';
+  cr.obj.position.set((Math.random() - 0.5) * 0.6, 0.05, z);
+  setLabel(cr, 'shop');
+  scene.add(cr.obj);
+  popIn(cr.obj, 1, 0.4);
+  carpet.push(cr);
+  if (RARITY_ORDER.indexOf(cr.sp.r) >= 3 || cr.variant !== 'normal') {
+    toast(`${cr.variant !== 'normal' ? VARIANTS[cr.variant].mark : '⭐'} ${RARITY[cr.sp.r].name}の「${cr.sp.name}」が来た！`);
+    sfx.rare();
+  }
+  return cr;
+}
+let carpetTimer = 0;
+// 歩いていくヘンテコ（買われた・取り返された）
+const walkers = [];
+function sendToBase(cr, base, slot) {
+  cr.state = 'walking'; cr.base = base; cr.slot = slot; cr.owner = base.owner;
+  slot.reserved = true; slot.reservedCr = cr;
+  cr.path = route(V(cr.obj.position.x, 0, cr.obj.position.z), slot.pos);
+  setLabel(cr, base.owner === 'player' ? 'acc' : 'inc', 0);
+  walkers.push(cr);
+}
+
+// =====================================================================
+//  道すじ（基地の入口を通る）
+// =====================================================================
+function baseAt(p) { return bases.find(b => inBase(b, p, 0.5)); }
+function route(a, b) {
+  const pts = [];
+  const ba = baseAt(a), bb = baseAt(b);
+  if (ba && ba !== bb) pts.push(ba.w(HALF_X - 1, 0), ba.w(HALF_X + 1.4, 0));
+  if (bb && ba !== bb) pts.push(bb.w(HALF_X + 1.4, 0), bb.w(HALF_X - 1, 0));
+  pts.push(V(b.x, 0, b.z));
+  return pts;
+}
+function followPath(o, dt, speed) {
+  if (!o.path || !o.path.length) { o.moving = false; return true; }
+  const pos = o.pos || o.obj.position;
+  const t = o.path[0];
+  const dx = t.x - pos.x, dz = t.z - pos.z, d = Math.hypot(dx, dz), step = speed * dt;
+  o.moving = true;
+  if (d > 0.01) {
+    let diff = Math.atan2(dx, dz) - o.obj.rotation.y;
+    while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2;
+    o.obj.rotation.y += diff * Math.min(1, dt * 12);
+  }
+  if (d <= step) { pos.x = t.x; pos.z = t.z; o.path.shift(); if (!o.path.length) { o.moving = false; return true; } }
+  else { pos.x += dx / d * step; pos.z += dz / d * step; }
+  return false;
+}
+
+// =====================================================================
+//  プレイヤーの行動（かう・ぬすむ・うる）
+// =====================================================================
+const actionEl = document.getElementById('action');
+let currentAction = null;
+function findAction() {
+  if (player.carry) return null;
+  let best = null, bd = 1e9;
+  const consider = (d, act) => { if (d < bd) { bd = d; best = act; } };
+  for (const cr of carpet) {
+    const d = Math.hypot(cr.obj.position.x - player.pos.x, cr.obj.position.z - player.pos.z);
+    if (d < 2.6) consider(d, { kind: 'buy', cr });
+  }
+  for (const b of bases) {
+    if (!inBase(b, player.pos, 0.3)) continue;
+    for (const s of b.slots) {
+      if (!s.cr) continue;
+      const d = Math.hypot(s.pos.x - player.pos.x, s.pos.z - player.pos.z);
+      if (d < 1.9) consider(d, b.owner === 'player' ? { kind: 'sell', slot: s } : { kind: 'steal', base: b, slot: s });
+    }
+  }
+  return best;
+}
+function renderAction(a) {
+  const key = a ? a.kind + (a.cr ? a.cr.obj.id : a.slot.i + a.kind) + save.money : '';
+  if (key === actionEl.dataset.key) return;
+  actionEl.dataset.key = key;
+  if (!a) { actionEl.style.display = 'none'; return; }
+  actionEl.style.display = 'block';
+  actionEl.className = a.kind === 'steal' ? 'steal' : a.kind === 'sell' ? 'sell' : '';
+  if (a.kind === 'buy') {
+    const p = crPrice(a.cr);
+    actionEl.innerHTML = `🛒 かう<small>💰${fmt(p)}</small>`;
+    actionEl.disabled = save.money < p || !freeSlot(playerBase);
+    if (!freeSlot(playerBase)) actionEl.innerHTML = `🛒 かう<small>基地がいっぱい</small>`;
+  } else if (a.kind === 'steal') {
+    actionEl.innerHTML = `🦹 ぬすむ<small>${a.slot.cr.sp.name}</small>`; actionEl.disabled = false;
+  } else {
+    actionEl.innerHTML = `💸 うる<small>💰${fmt(crPrice(a.slot.cr) / 2)}</small>`; actionEl.disabled = false;
+  }
+}
+actionEl.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation(); initAudio();
+  const a = currentAction; if (!a || actionEl.disabled) return;
+  if (a.kind === 'buy') doBuy(a.cr);
+  else if (a.kind === 'steal') doSteal(a.base, a.slot);
+  else doSell(a.slot);
+  actionEl.dataset.key = '__';   // 次のフレームで必ず描き直す
+});
+function doBuy(cr) {
+  const p = crPrice(cr), slot = freeSlot(playerBase);
+  if (save.money < p || !slot || cr.state !== 'carpet') return;
+  save.money -= p; save.bought++;
+  carpet.splice(carpet.indexOf(cr), 1);
+  sendToBase(cr, playerBase, slot);
+  sfx.buy(); hopObj(cr.obj);
+  floatText(`-💰${fmt(p)}`, cr.obj.position.clone().setY(2.6), { color: '#ffb0b0' });
+  if (discover(cr)) floatText('📖 図鑑に登録！', cr.obj.position.clone().setY(3.3), { color: '#ffe066', size: 0.8 });
+  if (save.tutorial === 0) setTutorial(1);
+  updateHud(true); writeSave();
+}
+function doSell(slot) {
+  const cr = removeFromSlot(slot);
+  const v = Math.floor(crPrice(cr) / 2) + Math.floor(slot.acc);
+  slot.acc = 0;
+  save.money += v; save.earned += v;
+  sfx.sell();
+  floatText(`+💰${fmt(v)}`, slot.pos.clone().setY(2.2), { color: '#ffe066' });
+  tween(0.3, (p) => cr.obj.scale.setScalar(Math.max(0.001, 1 - p)), () => scene.remove(cr.obj));
+  updateHud(true); writeSave();
+}
+function doSteal(base, slot) {
+  const cr = removeFromSlot(slot, true);
+  cr.state = 'carried'; cr.from = { base, slot };
+  player.carry = cr;
+  player.obj.add(cr.obj);
+  cr.obj.position.set(0, 1.45, 0); cr.obj.rotation.set(0, 0, 0); cr.obj.scale.setScalar(0.75);
+  sfx.steal();
+  floatText('🦹 ぬすんだ！', player.pos.clone().setY(3), { color: '#ff8080' });
+  // 持ち主が気づく
+  const owner = bots.find(bt => bt.base === base);
+  if (owner && owner.state !== 'steal' && owner.pos.distanceTo(player.pos) < 14) { owner.state = 'chase'; owner.chase = 10; owner.alertMark.visible = true; floatText('！', owner.pos.clone().setY(2.8), { color: '#ff4040', size: 1.2 }); }
+}
+function dropCarried(who) {
+  // つかまった → ヘンテコはもとの台へ帰る
+  const cr = who.carry; who.carry = null;
+  who.obj.remove(cr.obj);
+  const wp = (who.pos).clone();
+  cr.obj.position.set(wp.x, 0.05, wp.z); cr.obj.scale.setScalar(1);
+  scene.add(cr.obj);
+  const { base, slot } = cr.from;
+  cr.state = 'walking'; cr.base = base; cr.slot = slot; cr.owner = base.owner;
+  cr.path = route(wp, slot.pos);
+  walkers.push(cr);
+}
+const hopObj = (o) => { const y0 = o.position.y; tween(0.35, (p) => { o.position.y = y0 + Math.sin(p * Math.PI) * 0.6; }); };
+
+// =====================================================================
+//  ボット
+// =====================================================================
+let stealCd = 60;
+function botAlert(text) { const el = document.getElementById('alert'); el.textContent = text; el.style.display = text ? 'block' : 'none'; }
+function updateBot(bot, dt) {
+  const b = bot.base;
+  // バナナで転んでいる
+  if (bot.stun > 0) {
+    bot.stun -= dt;
+    bot.obj.rotation.y += dt * 14;
+    bot.obj.userData.inner.rotation.x = Math.min(1.3, bot.obj.userData.inner.rotation.x + dt * 8);
+    if (bot.stun <= 0) { bot.obj.userData.inner.rotation.x = 0; }
+    bot.obj.position.copy(bot.pos);
+    return;
+  }
+  const spd = { home: 2.6, buy: 3.0, steal: 3.4, flee: 3.0, chase: 3.6, back: 3.0 }[bot.state] || 3;
+  bot.timer -= dt; bot.lockCd -= dt;
+  // かせぎ
+  for (const s of b.slots) if (s.cr) bot.money += s.cr.sp.inc * VARIANTS[s.cr.variant].mult * 0.6 * dt;
+  switch (bot.state) {
+    case 'home': {
+      followPath(bot, dt, spd);
+      if (bot.timer > 0) break;
+      bot.timer = 3 + Math.random() * 4;
+      const r = Math.random();
+      if (!isLocked(b) && bot.lockCd <= 0 && r < 0.18) {
+        // 自分の基地をロック
+        bot.path = route(bot.pos, b.lockPos); bot.state = 'toLock'; break;
+      }
+      if (freeSlot(b) && r < 0.7) {
+        // じゅうたんでお買い物
+        const cand = carpet.filter(c => crPrice(c) <= bot.money * 0.9 && c.obj.position.z > -24 && c.obj.position.z < 18);
+        if (cand.length) {
+          const cr = cand.sort((x, y) => crPrice(y) - crPrice(x))[0];
+          bot.target = cr; bot.state = 'buy';
+          bot.path = route(bot.pos, V(-b.e * 2.4, 0, cr.obj.position.z + 3));
+          break;
+        }
+      }
+      bot.path = route(bot.pos, b.w((Math.random() - 0.3) * 6, (Math.random() - 0.5) * 9));
+      break;
+    }
+    case 'toLock':
+      if (followPath(bot, dt, spd)) {
+        b.lockUntil = elapsed + 30; bot.lockCd = 60 + Math.random() * 40;
+        sfx.lock(); bot.state = 'home'; bot.timer = 1;
+      }
+      break;
+    case 'buy': {
+      const cr = bot.target;
+      if (!cr || cr.state !== 'carpet') { bot.state = 'home'; bot.timer = 0.5; bot.path = route(bot.pos, b.w(0, 0)); break; }
+      followPath(bot, dt, spd);
+      const d = Math.hypot(cr.obj.position.x - bot.pos.x, cr.obj.position.z - bot.pos.z);
+      if (d < 2.6) {
+        const slot = freeSlot(b);
+        if (slot && bot.money >= crPrice(cr)) {
+          bot.money -= crPrice(cr);
+          carpet.splice(carpet.indexOf(cr), 1);
+          sendToBase(cr, b, slot);
+          floatText(`${bot.name}が買った`, cr.obj.position.clone().setY(2.8), { color: '#ffffff', size: 0.7 });
+        }
+        bot.state = 'home'; bot.timer = 1; bot.path = route(bot.pos, b.w(0, 0));
+      } else if (!bot.path.length || cr.obj.position.z > bot.pos.z + 6) { bot.state = 'home'; bot.timer = 0.5; bot.path = route(bot.pos, b.w(0, 0)); }
+      break;
+    }
+    case 'steal': {
+      const pb = playerBase;
+      const t = bot.target;
+      if (!t || !t.cr) { bot.state = 'back'; bot.path = route(bot.pos, b.w(0, 0)); botAlert(''); break; }
+      // 入口でロックされていたらあきらめる
+      if (isLocked(pb) && !inBase(pb, bot.pos, 0.2)) {
+        const gp = pb.w(HALF_X + 1.4, 0);
+        if (bot.pos.distanceTo(gp) < 1.8) { bot.state = 'back'; bot.path = route(bot.pos, b.w(0, 0)); botAlert(''); floatText('😤 しまってる…', bot.pos.clone().setY(2.6), { size: 0.7 }); break; }
+      }
+      if (followPath(bot, dt, spd)) {
+        // ぬすむ！
+        const cr = removeFromSlot(t, true);
+        cr.state = 'carried'; cr.from = { base: pb, slot: t };
+        bot.carry = cr; bot.obj.add(cr.obj); cr.obj.position.set(0, 1.45, 0); cr.obj.rotation.set(0, 0, 0); cr.obj.scale.setScalar(0.75);
+        sfx.steal(); save.stolen++;
+        botAlert(`🚨 ${bot.name}が「${cr.sp.name}」を持って逃げてる！`);
+        bot.state = 'flee'; bot.path = route(bot.pos, freeSlot(b) ? freeSlot(b).pos : b.w(0, 0));
+      }
+      break;
+    }
+    case 'flee': {
+      if (followPath(bot, dt, spd)) {
+        const cr = bot.carry; bot.carry = null; bot.obj.remove(cr.obj);
+        cr.from.slot.reserved = false; cr.from.slot.reservedCr = null;
+        const slot = freeSlot(b);
+        if (slot) placeOnSlot(b, slot, cr); else scene.remove(cr.obj);
+        floatText(`😈 とられた…`, bot.pos.clone().setY(2.6), { color: '#ff8080' });
+        botAlert(''); bot.alertMark.visible = false;
+        bot.state = 'home'; bot.timer = 2;
+      }
+      break;
+    }
+    case 'chase': {
+      bot.chase -= dt;
+      if (!player.carry || player.carry.from.base !== b || bot.chase <= 0 || inBase(playerBase, player.pos, -0.3)) {
+        bot.state = 'back'; bot.alertMark.visible = false; bot.path = route(bot.pos, b.w(0, 0)); break;
+      }
+      bot.path = [player.pos.clone()];
+      followPath(bot, dt, spd);
+      if (bot.pos.distanceTo(player.pos) < 0.95 && player.bubble > 0) {
+        // あわバリアではじかれる
+        if (!bot.bounced || elapsed - bot.bounced > 0.6) { bot.bounced = elapsed; floatText('ぽよん！', bot.pos.clone().setY(2.6), { color: '#9fe8ff', size: 0.7 }); sfx.sell(); }
+        const away = bot.pos.clone().sub(player.pos).setY(0).normalize().multiplyScalar(1.2);
+        bot.pos.add(away);
+      } else if (bot.pos.distanceTo(player.pos) < 0.95) {
+        dropCarried(player);
+        sfx.caught(); camShake = 0.35; save.caught++;
+        floatText('つかまった！', player.pos.clone().setY(3), { color: '#ff6060' });
+        bot.state = 'back'; bot.alertMark.visible = false; bot.path = route(bot.pos, b.w(0, 0));
+      }
+      break;
+    }
+    case 'back':
+      if (followPath(bot, dt, spd)) { bot.state = 'home'; bot.timer = 1 + Math.random() * 2; }
+      break;
+  }
+  bot.obj.position.copy(bot.pos);
+  bot.alertMark.position.y = 2.4 + Math.sin(elapsed * 8) * 0.1;
+}
+function maybeStartSteal(dt) {
+  if (save.tutorial < 3 || eventIs('peace')) return;
+  stealCd -= dt;
+  if (stealCd > 0 || bots.some(b => b.state === 'steal' || b.state === 'flee')) return;
+  stealCd = 50 + Math.random() * 50;
+  const targets = playerBase.slots.filter(s => s.cr);
+  if (!targets.length || isLocked(playerBase)) return;
+  const free = bots.filter(b => b.state === 'home' && freeSlot(b.base));
+  if (!free.length) return;
+  const bot = free[Math.floor(Math.random() * free.length)];
+  // いちばん高いヘンテコをねらう（ときどきランダム）
+  const t = Math.random() < 0.6 ? targets.sort((a, b) => crIncome(b.cr) - crIncome(a.cr))[0] : targets[Math.floor(Math.random() * targets.length)];
+  bot.target = t; bot.state = 'steal'; bot.alertMark.visible = true;
+  bot.path = route(bot.pos, t.pos.clone().add(playerBase.w(1.2, 0).sub(playerBase.w(0, 0))));
+  botAlert(`⚠️ ${bot.name}がぬすみに来る！`); sfx.alarm();
+}
+
+// ボットの最初のヘンテコ
+function seedBots() {
+  for (const bot of bots) {
+    const n = 3 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < n; k++) {
+      const slot = freeSlot(bot.base);
+      let spId = rollSpecies(0.6 + save.rebirths * 0.3);
+      if (k === 0 && Math.random() < 0.5) spId = SPECIES.filter(s => s.r === 'epic')[Math.floor(Math.random() * 2)].id;
+      const cr = makeCr(spId, rollVariant());
+      placeOnSlot(bot.base, slot, cr, false);
+    }
+    bot.money = 150 + Math.random() * 300 + save.rebirths * 2000;
+  }
+}
+
+// =====================================================================
+//  イベント
+// =====================================================================
+let event = null;           // { def, until }
+let nextEventAt = 70;
+function eventIs(id) { return !!(event && event.def.id === id); }
+const eventPill = document.getElementById('eventPill');
+const skyBase = new THREE.Color(0xa8e0ff);
+function startEvent(def) {
+  event = { def, until: elapsed + def.dur };
+  save.events++;
+  sfx.rare(); camShake = 0.25;
+  burst(player.pos.clone().setY(3), 60, 7);
+  toast(`🎪 イベント開始！<br>${def.name}<br><small>${def.desc}</small>`);
+  if (def.id === 'parade') {
+    // すごいヘンテコを2体、じゅうたんの手前に
+    for (let k = 0; k < 2; k++) {
+      const pool = SPECIES.filter(s => s.r === (Math.random() < 0.25 ? 'secret' : 'mythic'));
+      spawnCarpet(CARPET_Z0 + 2 - k * 4, pool[Math.floor(Math.random() * pool.length)].id);
+    }
+  }
+  if (def.id === 'peace') { bots.forEach(b => { if (b.state === 'steal') { b.state = 'back'; b.alertMark.visible = false; b.path = route(b.pos, b.base.w(0, 0)); } }); botAlert(''); }
+}
+function updateEvents(dt) {
+  if (!event && elapsed >= nextEventAt && save.tutorial >= 2) {
+    let def;
+    do { def = EVENTS[Math.floor(Math.random() * EVENTS.length)]; } while (lastEventId === def.id);
+    lastEventId = def.id;
+    startEvent(def);
+  }
+  if (event && elapsed >= event.until) {
+    toast(`${event.def.name} おしまい！<br><small>次のイベントもお楽しみに</small>`);
+    event = null;
+    nextEventAt = elapsed + 120 + Math.random() * 60;
+  }
+  // 表示
+  if (event) {
+    const left = Math.ceil(event.until - elapsed);
+    const txt = `${event.def.name}　のこり ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+    if (eventPill.textContent !== txt) eventPill.textContent = txt;
+    eventPill.style.display = 'block';
+  } else {
+    const left = Math.max(0, Math.ceil(nextEventAt - elapsed));
+    const txt = save.tutorial >= 2 ? `🎪 次のイベントまで ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+    eventPill.style.display = txt ? 'block' : 'none';
+    eventPill.style.background = 'rgba(0,0,0,.38)'; eventPill.style.color = '#fff'; eventPill.style.animation = 'none';
+    if (eventPill.textContent !== txt) eventPill.textContent = txt;
+  }
+  if (event) { eventPill.style.background = ''; eventPill.style.color = ''; eventPill.style.animation = ''; }
+  // 空の色
+  const target = event ? new THREE.Color(event.def.sky) : skyBase;
+  scene.background.lerp(target, Math.min(1, dt * 1.5));
+  scene.fog.color.copy(scene.background);
+  // 雪・キラキラ
+  if (event && (event.def.id === 'snow' || event.def.id === 'golden' || event.def.id === 'rainbow')) {
+    for (let k = 0; k < 2; k++) {
+      const m = new THREE.Mesh(flakeGeo, event.def.id === 'snow' ? flakeMat : event.def.id === 'golden' ? goldFlakeMat : confettiMats[Math.floor(Math.random() * confettiMats.length)]);
+      m.position.set(camTarget.x + (Math.random() - 0.5) * 30, 12, camTarget.z + (Math.random() - 0.5) * 30 - 4);
+      scene.add(m); flakes.push({ m, vy: -2 - Math.random() * 1.5, t: 0 });
+    }
+  }
+  for (let i = flakes.length - 1; i >= 0; i--) {
+    const f = flakes[i]; f.t += dt; f.m.position.y += f.vy * dt; f.m.position.x += Math.sin(f.t * 2 + i) * dt * 0.6; f.m.rotation.z += dt;
+    if (f.m.position.y < 0) { scene.remove(f.m); flakes.splice(i, 1); }
+  }
+}
+let lastEventId = null;
+const flakes = [];
+const flakeGeo = new THREE.PlaneGeometry(0.16, 0.16);
+const flakeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+const goldFlakeMat = new THREE.MeshBasicMaterial({ color: 0xffd34d, side: THREE.DoubleSide });
+
+// =====================================================================
+//  アイテム
+// =====================================================================
+const peels = [];
+const itemsEl = document.getElementById('items');
+function renderItems() {
+  let html = '';
+  for (const id of ['banana', 'bubble', 'warp']) {
+    const n = save.items[id];
+    if (!n && !(id === 'bubble' && player.bubble > 0)) continue;
+    html += `<button class="item ${id === 'bubble' && player.bubble > 0 ? 'on' : ''}" data-item="${id}">${ITEMS_DEF[id].icon}<b>${n}</b></button>`;
+  }
+  if (itemsEl.innerHTML !== html) itemsEl.innerHTML = html;
+}
+itemsEl.addEventListener('pointerdown', (e) => {
+  const b = e.target.closest('[data-item]'); if (!b) return;
+  e.preventDefault(); e.stopPropagation(); initAudio();
+  useItem(b.dataset.item);
+});
+function useItem(id) {
+  if (save.items[id] <= 0) return;
+  if (id === 'banana') {
+    if (peels.length >= 3) { floatText('バナナは3こまで', player.pos.clone().setY(2.6), { size: 0.7 }); return; }
+    const g = new THREE.Group();
+    for (let k = 0; k < 3; k++) { const p = sphere(0.22, mat(0xffd84a), 8); p.scale.set(1.4, 0.25, 0.5); p.rotation.y = k * 2.1; p.position.set(Math.cos(k * 2.1) * 0.15, 0.06, Math.sin(k * 2.1) * 0.15); g.add(p); }
+    const tip = sphere(0.07, mat(0x6b4a2a), 6); tip.position.y = 0.12; g.add(tip);
+    g.position.copy(player.pos).setY(0.02);
+    scene.add(g); popIn(g, 1, 0.3);
+    peels.push({ obj: g, pos: player.pos.clone(), t: 0 });
+    floatText('🍌 セット！', player.pos.clone().setY(2.6), { size: 0.7 });
+  } else if (id === 'bubble') {
+    if (player.bubble > 0) return;
+    player.bubble = 12;
+    floatText('🫧 あわバリア！', player.pos.clone().setY(2.6), { color: '#9fe8ff' });
+  } else if (id === 'warp') {
+    burst(player.pos.clone().setY(1), 30, 5);
+    player.pos.copy(playerBase.w(-0.8, 0));
+    camTarget.copy(player.pos);
+    burst(player.pos.clone().setY(1), 30, 5);
+    floatText('🌀 ワープ！', player.pos.clone().setY(2.6), { color: '#c08cff' });
+  }
+  save.items[id]--;
+  sfx.buy(); writeSave(); renderItems();
+}
+const bubbleMesh = sphere(1.05, new THREE.MeshLambertMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.3, depthWrite: false }), 16);
+bubbleMesh.position.y = 0.8; bubbleMesh.visible = false;
+player.obj.add(bubbleMesh);
+player.bubble = 0;
+function updateItems(dt) {
+  // あわバリア
+  if (player.bubble > 0) {
+    player.bubble -= dt;
+    bubbleMesh.visible = player.bubble > 2 || Math.floor(player.bubble * 8) % 2 === 0;
+    bubbleMesh.scale.setScalar(1 + Math.sin(elapsed * 6) * 0.04);
+    if (player.bubble <= 0) { bubbleMesh.visible = false; renderItems(); }
+  }
+  // バナナのかわ
+  for (let i = peels.length - 1; i >= 0; i--) {
+    const pe = peels[i]; pe.t += dt;
+    let used = false;
+    for (const bot of bots) {
+      if (bot.stun > 0 || bot.pos.distanceTo(pe.pos) > 0.75) continue;
+      bot.stun = 2.5; used = true; save.slipped++;
+      sfx.caught(); camShake = 0.2;
+      floatText('すってん！', bot.pos.clone().setY(2.6), { color: '#ffe066' });
+      if (bot.carry) { const name = bot.carry.sp.name; dropCarried(bot); botAlert(''); floatText(`「${name}」が逃げ出した！`, bot.pos.clone().setY(3.2), { color: '#9dff7a', size: 0.7 }); }
+      bot.state = 'back'; bot.alertMark.visible = false; bot.path = route(bot.pos, bot.base.w(0, 0));
+      break;
+    }
+    if (used || pe.t > 60) { scene.remove(pe.obj); peels.splice(i, 1); }
+  }
+}
+
+// =====================================================================
+//  マップのショップ
+// =====================================================================
+const SHOP_POS = V(-6, 0, 19);
+{
+  const g = new THREE.Group();
+  const counterM = box(3, 1, 1.2, mat(0xffffff)); counterM.position.set(0, 0.5, 0); g.add(counterM);
+  for (const sx of [-1.4, 1.4]) { const pole = cyl(0.07, 0.07, 2.6, mat(0x9b6538), 6, true); pole.position.set(sx, 1.3, -0.4); g.add(pole); }
+  for (let k = 0; k < 6; k++) { const st = box(0.52, 0.12, 1.5, mat(k % 2 ? 0xffffff : 0xff6b6b)); st.position.set(-1.3 + k * 0.52, 2.65, -0.1); st.rotation.x = 0.25; g.add(st); }
+  const signTex = canvasTex(512, 128, (c) => { c.fillStyle = '#ffcf3f'; c.fillRect(0, 0, 512, 128); c.fillStyle = '#4a2d00'; c.font = '900 70px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('🛒 ショップ', 256, 68); });
+  const sign = mesh(new THREE.PlaneGeometry(3, 0.75), new THREE.MeshBasicMaterial({ map: signTex, side: THREE.DoubleSide })); sign.position.set(0, 3.25, 0); g.add(sign);
+  for (const [x, c] of [[-0.9, 0xffd84a], [0, 0x9fe8ff], [0.9, 0xc08cff]]) { const it = sphere(0.18, mat(c), 10); it.position.set(x, 1.15, 0.1); g.add(it); }
+  const keeper = makeCharacter(0xffd36e, { cap: 0xff6b6b }); keeper.position.set(0, 0, -0.9); g.add(keeper); g.userData.keeper = keeper;
+  g.position.copy(SHOP_POS); g.rotation.y = 0;
+  scene.add(g);
+  var shopStand = g;
+}
+const shopRing = mesh(new THREE.RingGeometry(0.9, 1.05, 32), new THREE.MeshBasicMaterial({ color: 0xffcf3f, transparent: true, opacity: 0.9 }));
+shopRing.rotation.x = -Math.PI / 2; shopRing.position.copy(SHOP_POS).add(V(0, 0.03, 1.6)); scene.add(shopRing);
+let nearShop = false;
+function updateShopStand() {
+  const d = Math.hypot(player.pos.x - shopRing.position.x, player.pos.z - shopRing.position.z);
+  const inside = d < 1.1;
+  if (inside && !nearShop && menuEl.classList.contains('hidden')) openMenu('shop');
+  nearShop = inside;
+  shopRing.material.opacity = 0.5 + Math.sin(elapsed * 4) * 0.4;
+  animateChar(shopStand.userData.keeper, false, elapsed);
+}
+
+// =====================================================================
+//  チュートリアル・HUD・メニュー
+// =====================================================================
+const hintEl = document.getElementById('hint');
+const arrowObj = new THREE.Group();
+{ const c = mesh(new THREE.ConeGeometry(0.4, 0.7, 12), mat(0xffd34d, { emissive: 0x664400 })); c.rotation.x = Math.PI; arrowObj.add(c); scene.add(arrowObj); }
+const TUTORIAL = [
+  { text: '🛒 赤いじゅうたんのヘンテコに近づいて「かう」を押そう！（指でドラッグして移動）', target: () => V(0, 0, player.pos.z) },
+  { text: '💰 ヘンテコがお金をかせぐよ！台の前の緑の丸を踏んで回収しよう', target: () => playerBase.slots.find(s => s.cr)?.plate || null },
+  { text: '🦹 ほかの基地のヘンテコをぬすめる！持ち主につかまらないように自分の基地まで運ぼう', target: () => bases[1].w(0, 0) },
+  { text: '🔒 基地の赤いボタンを踏むとロック！ぬすまれないように守ろう', target: () => playerBase.lockPos },
+  { text: '', target: () => null },
+];
+function setTutorial(n) { save.tutorial = n; writeSave(); }
+let tutTimer = 0;
+function updateTutorial(dt) {
+  tutTimer += dt;
+  if (save.tutorial === 2 && tutTimer > 25) setTutorial(3);
+  if (save.tutorial === 3 && tutTimer > 45) setTutorial(4);
+  const st = TUTORIAL[Math.min(save.tutorial, 4)];
+  let text = st.text;
+  if (save.tutorial >= 4) {
+    text = '';
+    if (player.carry) text = '🏃 自分の基地まで運ぼう！';
+    else if (!freeSlot(playerBase)) text = '🏠 基地がいっぱい！安いヘンテコは「うる」でお金にしよう';
+  } else if (player.carry) text = '🏃 自分の基地まで運ぼう！';
+  if (hintEl.textContent !== text) hintEl.textContent = text;
+  hintEl.classList.toggle('hidden', !text || document.getElementById('alert').style.display === 'block');
+  const tg = save.tutorial < 4 ? st.target() : null;
+  arrowObj.visible = !!tg && !player.carry;
+  if (tg) { arrowObj.position.set(tg.x, 2.6 + Math.sin(elapsed * 4) * 0.25, tg.z); arrowObj.rotation.y += 0.05; }
+}
+const moneyEl = document.getElementById('money'), incomeEl = document.getElementById('income'), slotsEl = document.getElementById('slots'), lockEl = document.getElementById('lockInfo');
+function totalIncome() { return playerBase.slots.reduce((a, s) => a + (s.cr ? crIncome(s.cr) : 0), 0); }
+function updateHud(bump) {
+  moneyEl.textContent = `💰 ${fmt(save.money)}`;
+  incomeEl.textContent = `+${fmt(totalIncome())}/秒`;
+  slotsEl.textContent = `🏠 ${usedSlots(playerBase)}/${slotLimit()}`;
+  if (bump) { moneyEl.classList.remove('bump'); void moneyEl.offsetWidth; moneyEl.classList.add('bump'); }
+}
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(html) { toastEl.innerHTML = html; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400); }
+
+const menuEl = document.getElementById('menu'), menuList = document.getElementById('menuList');
+let menuTab = 'shop';
+function lvDots(lv, max) { let s = '<span class="lv">'; for (let i = 0; i < max; i++) s += `<i class="${i < lv ? 'on' : ''}"></i>`; return s + '</span>'; }
+function openMenu(tab) {
+  if (tab) menuTab = tab;
+  renderMenu(); menuEl.classList.remove('hidden'); joy.active = false; joyEl.style.display = 'none'; joy.dx = joy.dy = 0;
+}
+function renderMenu() {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === menuTab));
+  let html = '';
+  if (menuTab === 'shop') {
+    html += `<div class="stat"><span>💰 もっているお金</span><span>${fmt(save.money)}</span></div>`;
+    html += '<div class="shopSec">🎒 使いきりアイテム（左下のボタンで使う）</div>';
+    for (const id in ITEMS_DEF) {
+      const it = ITEMS_DEF[id];
+      html += `<div class="card"><div class="ic">${it.icon}</div><div class="tx"><div class="nm">${it.name}　<span style="font-size:12px;opacity:.7">もってる：${save.items[id]}</span></div><div class="ds">${it.desc}</div></div>
+        <button class="sbuy" data-buyitem="${id}" ${save.money < it.price ? 'disabled' : ''}>💰${fmt(it.price)}</button></div>`;
+    }
+    html += '<div class="shopSec">⭐ ずっと使える強化（リバースしても消えない）</div>';
+    for (const u of UPGRADES) {
+      const lv = save.shop[u.id], max = u.costs.length, maxed = lv >= max;
+      html += `<div class="card"><div class="ic">${u.icon}</div><div class="tx"><div class="nm">${u.name}${lvDots(lv, max)}</div><div class="ds">${maxed ? 'さいだいレベル！' : u.desc(lv)}</div></div>
+        ${maxed ? '<span class="done">MAX</span>' : `<button class="sbuy" data-up="${u.id}" ${save.money < u.costs[lv] ? 'disabled' : ''}>💰${fmt(u.costs[lv])}</button>`}</div>`;
+    }
+    html += `<div class="shopSec">🎪 イベント（2〜3分ごとに始まるよ）</div><div class="evlist">${EVENTS.map(e => `${e.name}：${e.desc}`).join('<br>')}</div>`;
+  } else if (menuTab === 'dex') {
+    const found = Object.keys(save.dex).length;
+    html += `<div class="stat"><span>📖 見つけたヘンテコ</span><span>${found} / ${SPECIES.length}</span></div><div class="dex">`;
+    for (const s of SPECIES) {
+      const d = save.dex[s.id], rr = RARITY[s.r];
+      const col = rr.color === 'rainbow' ? 'linear-gradient(90deg,#ff5a5a,#ffcf3f,#5fd16a,#4fb8ff,#c08cff)' : rr.color;
+      if (!d) { html += `<div class="dexc unk"><div class="dot" style="background:#ccc"></div><div class="nm">？？？</div><div class="rr" style="color:#999">${rr.name}</div></div>`; continue; }
+      html += `<div class="dexc"><div class="dot" style="background:#${new THREE.Color(s.color).getHexString()}"></div><div class="nm">${s.name}</div>
+        <div class="rr" style="${rr.color === 'rainbow' ? 'color:#c08cff' : 'color:' + rr.color};text-shadow:0 0 1px #0004">${rr.name}</div>
+        <div style="font-size:10px;opacity:.7">+${fmt(s.inc)}/秒</div>
+        <div class="vv">${d.includes('normal') ? '●' : '○'}${d.includes('gold') ? '✨' : '・'}${d.includes('rainbow') ? '🌈' : '・'}${d.includes('snow') ? '❄️' : '・'}</div></div>`;
+    }
+    html += '</div><div style="font-size:11px;opacity:.6;text-align:center">● ふつう ✨ ゴールド(×2) 🌈 にじいろ(×5) ❄️ ゆき(×3・イベント限定)</div>';
+  } else if (menuTab === 'rebirth') {
+    const cost = rebirthCost();
+    html += `<div class="big">🔁 <b>リバース</b>（${save.rebirths}回）<br>お金とヘンテコがぜんぶ消えるかわりに、<br>かせぐお金が <b>×${(incomeMult() + 0.5).toFixed(1)}</b> になるよ（今は ×${incomeMult().toFixed(1)}）<br>レアなヘンテコも出やすくなる！<br><br>必要なお金：💰${fmt(cost)}
+      <button class="buy" id="rebirthBtn" ${save.money < cost ? 'disabled' : ''}>リバースする</button></div>`;
+  } else {
+    html += `<div class="stat"><span>💰 かせいだ合計</span><span>${fmt(save.earned)}</span></div>`;
+    html += `<div class="stat"><span>🛒 買った数</span><span>${save.bought}</span></div>`;
+    html += `<div class="stat"><span>🦹 ぬすんだ数</span><span>${save.steals}</span></div>`;
+    html += `<div class="stat"><span>😈 ぬすまれた数</span><span>${save.stolen}</span></div>`;
+    html += `<div class="stat"><span>🚓 つかまった数</span><span>${save.caught}</span></div>`;
+    html += `<div class="stat"><span>🔁 リバース</span><span>${save.rebirths}回</span></div>`;
+    html += `<div class="stat"><span>🎪 参加したイベント</span><span>${save.events}回</span></div>`;
+    html += `<div class="stat"><span>🍌 転ばせたボット</span><span>${save.slipped}回</span></div>`;
+    html += `<button class="buy" id="resetBtn" style="background:#bbb;box-shadow:0 3px 0 #999">データを消して最初から</button>`;
+  }
+  menuList.innerHTML = html;
+}
+document.getElementById('menuBtn').addEventListener('pointerup', (e) => { e.preventDefault(); initAudio(); openMenu(); });
+document.getElementById('menuClose').addEventListener('pointerup', (e) => { e.preventDefault(); menuEl.classList.add('hidden'); });
+menuEl.addEventListener('pointerup', (e) => { if (e.target === menuEl) menuEl.classList.add('hidden'); });
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('pointerup', (e) => { e.preventDefault(); menuTab = t.dataset.tab; renderMenu(); }));
+menuList.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  if (b.dataset.buyitem) {
+    const it = ITEMS_DEF[b.dataset.buyitem];
+    if (save.money < it.price) return;
+    save.money -= it.price; save.items[b.dataset.buyitem]++;
+    sfx.buy(); floatText(`${it.icon} ゲット！`, player.pos.clone().setY(2.6), { size: 0.8 });
+    writeSave(); renderItems(); updateHud(true); renderMenu();
+    return;
+  }
+  if (b.dataset.up) {
+    const u = UPGRADES.find(x => x.id === b.dataset.up);
+    const cost = u.costs[save.shop[u.id]];
+    if (save.money < cost) return;
+    save.money -= cost; save.shop[u.id]++;
+    if (u.id === 'expand') unlockExtraSlots(true);
+    sfx.rare(); burst(player.pos.clone().setY(2), 40, 6);
+    floatText(`${u.icon} レベルアップ！`, player.pos.clone().setY(2.6), { color: '#ffe066', size: 0.8 });
+    writeSave(); updateHud(true); renderMenu();
+    return;
+  }
+  if (b.id === 'rebirthBtn') {
+    if (save.money < rebirthCost()) return;
+    save.money = 0; save.rebirths++;
+    for (const s of playerBase.slots) { if (s.cr) scene.remove(s.cr.obj); s.cr = null; s.acc = 0; s.reserved = false; }
+    if (player.carry) { player.obj.remove(player.carry.obj); player.carry = null; }
+    save.money = 100;
+    writeSave(); menuEl.classList.add('hidden');
+    sfx.rare(); burst(player.pos.clone().setY(2), 100, 8);
+    toast(`🔁 リバース！<br><small>かせぎが ×${incomeMult().toFixed(1)} になった！</small>`);
+    updateHud(true);
+  } else if (b.id === 'resetBtn') {
+    if (b.dataset.sure) { try { localStorage.removeItem(SAVE_KEY); } catch (err) {} location.reload(); return; }
+    b.dataset.sure = '1'; b.textContent = 'ほんとうに消す？（もう一度押す）'; b.style.background = '#e84a4a';
+  }
+});
+
+// =====================================================================
+//  操作
+// =====================================================================
+const joyEl = document.getElementById('joy'), knobEl = document.getElementById('knob');
+const joy = { active: false, id: null, sx: 0, sy: 0, dx: 0, dy: 0 };
+const keys = {};
+// 画面のどこを触ってもスティックが出る（ボタンやメニューはのぞく）
+window.addEventListener('pointerdown', (e) => {
+  if (e.target.closest && e.target.closest('button, a, #menu, #items, #gate')) return;
+  initAudio(); if (joy.active) return;
+  joy.active = true; joy.id = e.pointerId; joy.sx = e.clientX; joy.sy = e.clientY; joy.dx = joy.dy = 0;
+  joyEl.style.left = e.clientX + 'px'; joyEl.style.top = e.clientY + 'px'; joyEl.style.display = 'block'; knobEl.style.transform = 'translate(0,0)';
+});
+window.addEventListener('pointermove', (e) => {
+  if (!joy.active || e.pointerId !== joy.id) return;
+  let dx = e.clientX - joy.sx, dy = e.clientY - joy.sy; const d = Math.hypot(dx, dy), max = 50;
+  if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+  joy.dx = dx / max; joy.dy = dy / max; knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
+});
+const endJoy = (e) => { if (e.pointerId !== joy.id) return; joy.active = false; joy.dx = joy.dy = 0; joyEl.style.display = 'none'; };
+window.addEventListener('pointerup', endJoy);
+window.addEventListener('pointercancel', endJoy);
+window.addEventListener('keydown', (e) => { keys[e.code] = true; initAudio(); if (e.code === 'Space' && currentAction) actionEl.dispatchEvent(new Event('pointerdown')); });
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+document.addEventListener('touchstart', (e) => { if (!e.target.closest('button, a, #menu')) e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+// =====================================================================
+//  スタート
+// =====================================================================
+let elapsed = 0;
+// セーブからヘンテコをもどす
+if (save.shop.expand) unlockExtraSlots(false);
+(save.slots || []).forEach((d, i) => {
+  if (!d || !SP[d.sp] || i >= playerBase.slots.length) return;
+  if (playerBase.slots[i].locked) return;
+  const cr = makeCr(d.sp, d.v || 'normal');
+  playerBase.slots[i].acc = d.acc || 0;
+  placeOnSlot(playerBase, playerBase.slots[i], cr, false);
+});
+seedBots();
+for (let z = CARPET_Z0 + 4; z < CARPET_Z1 - 4; z += 6) spawnCarpet(z);
+toastEl.classList.remove('show');
+// 留守のあいだのかせぎ（最大1時間ぶんの半分）
+if (save.last) {
+  const away = Math.min(3600, (Date.now() - save.last) / 1000);
+  const inc = totalIncome();
+  if (away > 30 && inc > 0) {
+    const got = Math.floor(inc * away * 0.5);
+    save.money += got; save.earned += got;
+    setTimeout(() => toast(`👋 おかえり！<br><small>留守のあいだに 💰${fmt(got)} かせいだよ</small>`), 600);
+  }
+}
+updateHud();
+renderItems();
+
+function blockers() {
+  const list = [];
+  for (const b of bases) { list.push(...b.walls); if (b.owner !== 'player' && isLocked(b)) list.push(b.gateBox); }
+  return list;
+}
+const BOUNDS = 26;
+
+// =====================================================================
+//  メインループ
+// =====================================================================
+const clock = new THREE.Clock();
+const camTarget = new THREE.Vector3().copy(player.pos);
+let saveTimer = 0, hudTimer = 0, labelTimer = 0;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 1 / 20) * TIME_SCALE;
+  elapsed += dt;
+
+  // プレイヤー
+  let mx = joy.dx, mz = joy.dy;
+  if (keys.ArrowLeft || keys.KeyA) mx = -1; if (keys.ArrowRight || keys.KeyD) mx = 1;
+  if (keys.ArrowUp || keys.KeyW) mz = -1; if (keys.ArrowDown || keys.KeyS) mz = 1;
+  const mag = Math.min(1, Math.hypot(mx, mz));
+  player.moving = mag > 0.15;
+  if (player.moving) {
+    const n = Math.hypot(mx, mz), sp = (player.carry ? (eventIs('peace') ? 4.8 : 3.6) : 5.4) * (1 + 0.12 * save.shop.shoes) * mag;
+    const nx = player.pos.x + mx / n * sp * dt, nz = player.pos.z + mz / n * sp * dt;
+    const bl = blockers();
+    const hit = (x, z) => bl.some(b => x > b.x1 - 0.35 && x < b.x2 + 0.35 && z > b.z1 - 0.35 && z < b.z2 + 0.35);
+    if (!hit(nx, player.pos.z)) player.pos.x = nx;
+    if (!hit(player.pos.x, nz)) player.pos.z = nz;
+    player.pos.x = Math.max(-BOUNDS, Math.min(BOUNDS, player.pos.x));
+    player.pos.z = Math.max(CARPET_Z0, Math.min(CARPET_Z1, player.pos.z));
+    let diff = Math.atan2(mx, mz) - player.dir;
+    while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2;
+    player.dir += diff * Math.min(1, dt * 14);
+  }
+  player.obj.position.copy(player.pos); player.obj.rotation.y = player.dir;
+  animateChar(player.obj, player.moving, elapsed);
+  if (player.carry) {
+    animateCreature(player.carry, elapsed, true);
+    // 自分の基地に着いたら置く
+    if (inBase(playerBase, player.pos, -0.3)) {
+      const slot = freeSlot(playerBase);
+      if (slot) {
+        const cr = player.carry; player.carry = null; player.obj.remove(cr.obj);
+        const from = cr.from; from.slot.reserved = false; from.slot.reservedCr = null;
+        placeOnSlot(playerBase, slot, cr);
+        save.steals++; sfx.place(); burst(slot.pos.clone().setY(1.5), 50, 6);
+        floatText('🎉 ゲット！', slot.pos.clone().setY(2.8), { color: '#ffe066' });
+        if (discover(cr)) floatText('📖 図鑑に登録！', slot.pos.clone().setY(3.5), { color: '#ffe066', size: 0.8 });
+        if (save.tutorial === 2) setTutorial(3);
+        bots.forEach(b => { if (b.state === 'chase') { b.state = 'back'; b.alertMark.visible = false; b.path = route(b.pos, b.base.w(0, 0)); } });
+        updateHud(true); writeSave();
+      }
+    }
+  }
+  // どろぼうに体当たり
+  for (const bot of bots) {
+    if (bot.carry && bot.pos.distanceTo(player.pos) < 1.0) {
+      const name = bot.carry.sp.name;
+      dropCarried(bot);
+      bot.state = 'back'; bot.alertMark.visible = false; bot.path = route(bot.pos, bot.base.w(0, 0));
+      sfx.place(); camShake = 0.3; botAlert('');
+      floatText(`💪 「${name}」を取り返した！`, player.pos.clone().setY(3), { color: '#9dff7a', size: 0.8 });
+    }
+  }
+
+  // ロックボタン
+  if (!isLocked(playerBase) && Math.hypot(player.pos.x - playerBase.lockPos.x, player.pos.z - playerBase.lockPos.z) < 0.7) {
+    playerBase.lockUntil = elapsed + LOCK_TIMES[save.shop.lock]; sfx.lock(); camShake = 0.15;
+    floatText('🔒 ロック！', playerBase.lockPos.clone().setY(2.2), { color: '#ff8080' });
+    if (save.tutorial === 3) setTutorial(4);
+  }
+  for (const b of bases) {
+    const locked = isLocked(b);
+    b.gate.visible = locked;
+    b.lockBtn.position.y = locked ? 0.26 : 0.34;
+    b.gateLabel.visible = locked;
+    if (locked) {
+      const sec = Math.ceil(b.lockUntil - elapsed);
+      if (b.gateLabel.userData.sec !== sec) {
+        b.gateLabel.userData.sec = sec;
+        if (b.gateLabel.material.map) b.gateLabel.material.map.dispose();
+        b.gateLabel.material.map = canvasTex(256, 64, (g) => { g.fillStyle = 'rgba(200,30,30,.85)'; g.beginPath(); g.roundRect(4, 4, 248, 56, 20); g.fill(); g.fillStyle = '#fff'; g.font = '900 38px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(`🔒 ${sec}`, 128, 34); });
+        b.gateLabel.material.needsUpdate = true;
+      }
+      b.gate.children.forEach((l, k) => { if (l.material.opacity !== undefined && k < 5) l.scale.x = 1 + Math.sin(elapsed * 20 + k) * 0.3; });
+    }
+  }
+  lockEl.textContent = isLocked(playerBase) ? `🔒 ${Math.ceil(playerBase.lockUntil - elapsed)}` : '🔓';
+
+  // じゅうたん
+  carpetTimer -= dt;
+  if (carpetTimer <= 0) { spawnCarpet(); carpetTimer = (2.6 + Math.random() * 1.2) * (eventIs('parade') || eventIs('rare') ? 0.7 : 1); }
+  for (let i = carpet.length - 1; i >= 0; i--) {
+    const cr = carpet[i];
+    cr.obj.position.z += CARPET_SPEED * dt; cr.obj.rotation.y = 0;
+    animateCreature(cr, elapsed, true);
+    if (cr.obj.position.z > CARPET_Z1) { scene.remove(cr.obj); carpet.splice(i, 1); }
+  }
+  for (const a of carpetArrows) { a.position.z += CARPET_SPEED * dt; if (a.position.z > CARPET_Z1) a.position.z -= (CARPET_Z1 - CARPET_Z0 - 2); }
+  // 歩いていくヘンテコ
+  for (let i = walkers.length - 1; i >= 0; i--) {
+    const cr = walkers[i];
+    animateCreature(cr, elapsed, true);
+    if (followPath(cr, dt, 3.2)) { walkers.splice(i, 1); placeOnSlot(cr.base, cr.slot, cr); if (cr.base === playerBase) { sfx.place(); updateHud(); } }
+  }
+  // かせぎ
+  for (const s of playerBase.slots) if (s.cr) { s.acc += crIncome(s.cr) * dt; animateCreature(s.cr, elapsed, false); }
+  for (const b of bases) if (b !== playerBase) for (const s of b.slots) if (s.cr) animateCreature(s.cr, elapsed, false);
+  // 回収
+  for (const s of playerBase.slots) {
+    s.ring.material.opacity = s.cr && s.acc >= 1 ? 0.6 + Math.sin(elapsed * 5) * 0.3 : 0.3;
+    if (s.cr && s.acc >= 1 && Math.hypot(player.pos.x - s.plate.x, player.pos.z - s.plate.z) < 0.75) {
+      const v = Math.floor(s.acc); s.acc -= v;
+      save.money += v; save.earned += v;
+      sfx.coin(); floatText(`+💰${fmt(v)}`, s.plate.clone().setY(1.6), { color: '#ffe066', size: 0.8 });
+      if (save.tutorial === 1) { setTutorial(2); tutTimer = 0; }
+      updateHud(true);
+    }
+  }
+  labelTimer -= dt;
+  if (labelTimer <= 0) { labelTimer = 0.4; for (const s of playerBase.slots) if (s.cr) setLabel(s.cr, 'acc', s.acc); }
+
+  // ボット
+  for (const bot of bots) { updateBot(bot, dt); if (!(bot.stun > 0)) animateChar(bot.obj, bot.moving, elapsed + bot.i); }
+  maybeStartSteal(dt);
+  updateItems(dt);
+  updateEvents(dt);
+  updateShopStand();
+
+  // 行動ボタン
+  currentAction = findAction();
+  renderAction(currentAction);
+
+  // アニメーション
+  rainbowMat.color.copy(RAINBOW(elapsed));
+  for (let i = 0; i < tweens.length; i++) {
+    const tw = tweens[i]; tw.t += dt; if (tw.t < 0) continue;
+    const p = Math.min(1, tw.t / tw.dur); tw.fn(p);
+    if (p >= 1) { tweens.splice(i--, 1); if (tw.done) tw.done(); }
+  }
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const c = confetti[i]; c.t += dt; c.vy -= 9 * dt; if (c.vy < -2) c.vy = -2;
+    c.m.position.x += c.vx * dt; c.m.position.y += c.vy * dt; c.m.position.z += c.vz * dt; c.m.rotation.x += c.r * dt; c.m.rotation.y += c.r * 0.7 * dt;
+    if (c.t > c.life || c.m.position.y < 0) { scene.remove(c.m); confetti.splice(i, 1); }
+  }
+  updateTutorial(dt);
+  hudTimer -= dt; if (hudTimer <= 0) { hudTimer = 0.5; updateHud(); }
+
+  // カメラ
+  camTarget.lerp(player.pos, Math.min(1, dt * 6));
+  camera.position.copy(camTarget).addScaledVector(CAM_OFFSET, camera.aspect < 0.7 ? 1.15 : 1);
+  if (camShake > 0) { camShake -= dt; camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; }
+  camera.lookAt(camTarget.x, 0.5, camTarget.z);
+  sun.position.set(camTarget.x + 8, 18, camTarget.z + 6); sun.target.position.copy(camTarget);
+
+  saveTimer += dt; if (saveTimer > 4) { saveTimer = 0; writeSave(); }
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+document.getElementById('loading').remove();
+requestAnimationFrame(frame);
+window.addEventListener('pagehide', writeSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) writeSave(); });
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('../sw.js').catch(() => {});
+if (TEST) window.__heist = { save, player, bots, bases, carpet, walkers, doBuy, doSteal, startEvent: (i) => startEvent(EVENTS[i]), get event() { return event; }, useItem, peels, openMenu, get action() { return currentAction; }, setStealCd: (v) => { stealCd = v; }, get elapsed() { return elapsed; } };
+</script>
+</body>
+</html>

@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<script src="../lib/gate.js" data-game="mart" data-title="わくわくマート" data-hash="774881afa8364de49cb1e4491def8db6adc24b4c00e713db6380fb6af1e40a75"></script>
+<title>わくわくマート</title>
+<meta name="theme-color" content="#7cc96b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ゲームズ">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #7cc96b; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none; overscroll-behavior: none;
+  }
+  canvas { display: block; position: fixed; inset: 0; width: 100%; height: 100%; }
+
+  .corner {
+    position: fixed; z-index: 10;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(0,0,0,.28); color: #fff; border: none;
+    font-size: 21px; line-height: 42px; text-align: center; text-decoration: none;
+  }
+  #backBtn { left: calc(env(safe-area-inset-left, 0px) + 12px); }
+  #muteBtn { right: calc(env(safe-area-inset-right, 0px) + 12px); }
+
+  #hud {
+    position: fixed; z-index: 5; left: 0; right: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    pointer-events: none;
+  }
+  .pill {
+    background: rgba(0,0,0,.35); border-radius: 999px;
+    padding: 5px 16px; font-weight: 900; font-size: 22px;
+    text-shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+  .row { display: flex; gap: 6px; }
+  .small { font-size: 13px; padding: 4px 11px; display: flex; align-items: center; gap: 6px; }
+  #rankBar { width: 54px; height: 7px; border-radius: 4px; background: rgba(255,255,255,.3); overflow: hidden; }
+  #rankFill { height: 100%; width: 0; background: #ffd34d; transition: width .3s; }
+  #money.bump { animation: bump .25s; }
+  @keyframes bump { 50% { transform: scale(1.15); } }
+
+  #hint {
+    position: fixed; z-index: 5; left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+    background: rgba(255,255,255,.93); color: #3a2a1a;
+    border-radius: 14px; padding: 9px 15px; max-width: 92vw;
+    font-weight: 800; font-size: 14px; text-align: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,.2);
+    pointer-events: none; transition: opacity .3s;
+  }
+  #hint.hidden { opacity: 0; }
+
+  #menuBtn {
+    position: fixed; z-index: 8; right: calc(env(safe-area-inset-right, 0px) + 14px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    width: 64px; height: 64px; border-radius: 20px; border: none;
+    background: #ffcf3f; color: #4a2d00; font-size: 28px; font-weight: 900;
+    box-shadow: 0 4px 0 #c99400, 0 6px 16px rgba(0,0,0,.25);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  }
+  #menuBtn small { font-size: 10px; margin-top: 3px; }
+  #menuBtn.hidden { display: none; }
+  #menuBadge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; border-radius: 11px; background: #e84a4a; color: #fff; font-size: 13px; line-height: 22px; padding: 0 5px; display: none; }
+
+  #joy { position: fixed; z-index: 6; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+         background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.45); pointer-events: none; display: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
+          background: rgba(255,255,255,.75); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+
+  #toast {
+    position: fixed; z-index: 7; left: 50%; top: 34%; transform: translate(-50%, -50%) scale(.8);
+    background: #ffcf3f; color: #4a2d00; border-radius: 18px; padding: 14px 22px;
+    font-size: 21px; font-weight: 900; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; text-align: center; max-width: 88vw;
+  }
+  #toast small { font-size: 14px; font-weight: 700; }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  /* ===== メニュー ===== */
+  #menu {
+    position: fixed; z-index: 20; inset: 0; background: rgba(0,0,0,.35);
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  #menu.hidden { display: none; }
+  .sheet {
+    width: 100%; max-width: 520px; max-height: 78vh; background: #fff8ec; color: #3a2a1a;
+    border-radius: 24px 24px 0 0; padding: 14px 14px calc(env(safe-area-inset-bottom, 0px) + 14px);
+    display: flex; flex-direction: column; animation: up .25s ease-out;
+  }
+  @keyframes up { from { transform: translateY(40%); opacity: .4; } }
+  .sheetHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .sheetHead b { font-size: 20px; }
+  .sheetHead .money { font-weight: 900; font-size: 16px; }
+  #menuClose { width: 38px; height: 38px; border-radius: 50%; border: none; background: #eadfcb; font-size: 18px; font-weight: 900; color: #3a2a1a; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab { flex: 1; padding: 9px 2px; border-radius: 12px; border: none; background: #eadfcb; color: #3a2a1a; font-weight: 800; font-size: 12px; white-space: nowrap; position: relative; }
+  .tab.on { background: #ffcf3f; }
+  .tab .dot { position: absolute; top: 4px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: #e84a4a; }
+  .list { overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 8px; padding-bottom: 4px; }
+  .card { background: #fff; border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 0 #eadfcb; }
+  .card .ic { font-size: 30px; width: 40px; text-align: center; }
+  .card .tx { flex: 1; min-width: 0; }
+  .card .nm { font-weight: 900; font-size: 15px; }
+  .card .ds { font-size: 12px; opacity: .75; margin-top: 2px; }
+  .lv { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+  .lv i { width: 8px; height: 8px; border-radius: 50%; background: #e3d6bf; display: inline-block; }
+  .lv i.on { background: #ffb020; }
+  .buy { border: none; border-radius: 12px; padding: 10px 12px; min-width: 82px; font-weight: 900; font-size: 14px; background: #5fbf6a; color: #fff; box-shadow: 0 3px 0 #3f9a4a; }
+  .buy:disabled { background: #cfc4b0; box-shadow: 0 3px 0 #b3a891; }
+  .buy.claim { background: #ff8f3f; box-shadow: 0 3px 0 #d0651f; }
+  .bar { height: 8px; border-radius: 4px; background: #eadfcb; margin-top: 6px; overflow: hidden; }
+  .bar > div { height: 100%; background: #5fbf6a; }
+  .stat { display: flex; justify-content: space-between; padding: 9px 12px; background: #fff; border-radius: 12px; font-weight: 700; font-size: 14px; }
+  .done { font-size: 13px; font-weight: 900; color: #3f9a4a; }
+
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; background: #7cc96b; z-index: 30; }
+</style>
+</head>
+<body>
+<div id="loading">読みこみ中…</div>
+<a id="backBtn" class="corner" href="../" aria-label="ゲーム一覧にもどる">←</a>
+<button id="muteBtn" class="corner" aria-label="音のオン・オフ">🔊</button>
+<div id="hud">
+  <div class="pill" id="money">💰 0</div>
+  <div class="row">
+    <div class="pill small" id="rank">★1 <div id="rankBar"><div id="rankFill"></div></div></div>
+    <div class="pill small" id="carry">🧺 0 / 6</div>
+  </div>
+</div>
+<div id="hint" class="hidden"></div>
+<div id="toast"></div>
+<div id="joy"><div id="knob"></div></div>
+<button id="menuBtn" class="hidden">🏪<small>メニュー</small><span id="menuBadge"></span></button>
+
+<div id="menu" class="hidden">
+  <div class="sheet">
+    <div class="sheetHead">
+      <b>🏪 お店メニュー</b>
+      <span class="money" id="menuMoney">💰 0</span>
+      <button id="menuClose">✕</button>
+    </div>
+    <div class="tabs">
+      <button class="tab on" data-tab="up">⬆️ 強化</button>
+      <button class="tab" data-tab="staff">👥 スタッフ</button>
+      <button class="tab" data-tab="mission">📜 ミッション<span class="dot" id="missionDot" style="display:none"></span></button>
+      <button class="tab" data-tab="stats">📊 記録</button>
+    </div>
+    <div class="list" id="menuList"></div>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from '../lib/three.min.js';
+await window.gateReady;   // パスワードが通るまで待つ
+
+// =====================================================================
+//  データ
+// =====================================================================
+const SAVE_KEY = 'mart-save';
+const MUTE_KEY = 'mart-muted';
+const BEST_KEY = 'mart-best';          // トップページに出す「売上」
+const TEST = new URLSearchParams(location.search).has('test');
+const TIME_SCALE = TEST ? +(new URLSearchParams(location.search).get('speed') || 1) : 1;   // テスト用の早送り
+
+const ITEMS = {
+  tomato:     { name: 'トマト',         emoji: '🍅', price: 5,  grow: 3.0 },
+  corn:       { name: 'とうもろこし',   emoji: '🌽', price: 9,  grow: 4.0 },
+  carrot:     { name: 'にんじん',       emoji: '🥕', price: 14, grow: 5.0 },
+  strawberry: { name: 'いちご',         emoji: '🍓', price: 20, grow: 5.5 },
+  apple:      { name: 'りんご',         emoji: '🍎', price: 28, grow: 7.0 },
+  juice:      { name: 'トマトジュース', emoji: '🧃', price: 40 },
+};
+const CROPS = ['tomato', 'corn', 'carrot', 'strawberry', 'apple'];
+const SELLS = ['tomato', 'corn', 'carrot', 'strawberry', 'apple', 'juice'];
+
+// 配置
+const SHELF_POS = { tomato: [-4, -1.6], corn: [0, -1.6], carrot: [4, -1.6], strawberry: [-4, 1.6], apple: [0, 1.6], juice: [4, 1.6] };
+const FIELD_POS = { tomato: [-4, -9], corn: [0, -9], carrot: [4, -9], strawberry: [-4, -13], apple: [0, -13] };
+const JUICER_POS = [4, -13];
+
+// 新しいものをかいほうするパネル
+const UNLOCKS = [
+  { id: 'corn',       icon: '🌽', label: 'とうもろこし', price: 40,   pos: [0, -6.4],  req: () => true },
+  { id: 'carrot',     icon: '🥕', label: 'にんじん',     price: 150,  pos: [4, -6.4],  req: () => save.unlocked.corn },
+  { id: 'strawberry', icon: '🍓', label: 'いちご',       price: 400,  pos: [-4, -13],  req: () => save.unlocked.carrot },
+  { id: 'juice',      icon: '🧃', label: 'ジューサー',   price: 650,  pos: [4, -13],   req: () => save.unlocked.strawberry },
+  { id: 'apple',      icon: '🍎', label: 'りんごの木',   price: 1100, pos: [0, -13],   req: () => save.unlocked.juice },
+];
+
+// 強化（レベルごとの値）
+const BASKET = [6, 10, 14, 20, 26];
+const SPEED = [5.0, 6.0, 7.0, 8.0];
+const FERT = [1, 0.8, 0.65, 0.5];
+const SHELF_CAP = [8, 12, 16];
+const ADS_INTERVAL = [1, 0.85, 0.7, 0.6, 0.5];
+const STAFF_SPEED = [1, 1.25, 1.5, 1.8];
+const UPGRADES = [
+  { id: 'basket', icon: '🧺', name: '大きなカゴ', costs: [60, 200, 450, 900],  desc: (lv) => `持てる数 ${BASKET[lv]} → ${BASKET[lv + 1]}` },
+  { id: 'shoes',  icon: '👟', name: 'はやい靴',   costs: [100, 350, 800],      desc: () => '歩くのが速くなる' },
+  { id: 'fert',   icon: '🌱', name: 'ひりょう',   costs: [150, 500, 1200],     desc: () => '作物が早く育つ' },
+  { id: 'shelf',  icon: '🗄️', name: '大きな棚',   costs: [200, 700],           desc: (lv) => `棚に置ける数 ${SHELF_CAP[lv]} → ${SHELF_CAP[lv + 1]}` },
+  { id: 'ads',    icon: '📣', name: 'チラシ',     costs: [120, 400, 1000, 2200], desc: () => 'お客さんがたくさん来る' },
+  { id: 'price',  icon: '🏷️', name: 'ブランド力', costs: [300, 900, 2000, 4000], desc: (lv) => `商品が ${15 * (lv + 1)}% 高く売れる` },
+];
+const STAFF = [
+  { id: 'cashier', icon: '🧑‍💼', name: 'レジ係',     cost: 250,  desc: 'いなくても自動で会計してくれる', req: () => true },
+  { id: 'helper1', icon: '🧑‍🌾', name: '品出し係①', cost: 300,  desc: '畑から収穫して棚にならべてくれる', req: () => true },
+  { id: 'helper2', icon: '🧑‍🌾', name: '品出し係②', cost: 900,  desc: 'もう1人やとう', req: () => save.staff.helper1 },
+  { id: 'helper3', icon: '🧑‍🌾', name: '品出し係③', cost: 2000, desc: 'さらにもう1人', req: () => save.staff.helper2 },
+];
+const STAFF_UP = { id: 'staffSpeed', icon: '⚡', name: 'スタッフ研修', costs: [250, 700, 1600], desc: () => 'スタッフの動きが速くなる' };
+
+// ランク（売上の合計で上がる）
+const RANKS = [0, 80, 250, 600, 1200, 2500, 5000, 9000, 15000, 25000];
+
+// ミッション [説明, 進みぐあい, 目標, ごほうび]
+const MISSIONS = [
+  ['🍅 トマトを10こ売ろう',         s => s.sold.tomato, 10, 30],
+  ['🙂 お客さん10人に売ろう',        s => s.served, 10, 40],
+  ['🌽 とうもろこしをかいほう',      s => +s.unlocked.corn, 1, 30],
+  ['🧺 カゴを大きくしよう',          s => s.lv.basket, 1, 50],
+  ['🌽 とうもろこしを15こ売ろう',    s => s.sold.corn, 15, 60],
+  ['💰 売上 300 をめざそう',         s => s.earned, 300, 80],
+  ['🥕 にんじんをかいほう',          s => +s.unlocked.carrot, 1, 80],
+  ['🧑‍💼 レジ係をやとおう',          s => +s.staff.cashier, 1, 100],
+  ['🙂 お客さん50人に売ろう',        s => s.served, 50, 150],
+  ['🧑‍🌾 品出し係をやとおう',        s => +s.staff.helper1, 1, 150],
+  ['🥕 にんじんを30こ売ろう',        s => s.sold.carrot, 30, 200],
+  ['🍓 いちごをかいほう',            s => +s.unlocked.strawberry, 1, 200],
+  ['👑 VIPのお客さんに3回売ろう',     s => s.vip, 3, 250],
+  ['🧃 ジューサーをかいほう',        s => +s.unlocked.juice, 1, 300],
+  ['🧃 ジュースを20こ売ろう',        s => s.sold.juice, 20, 400],
+  ['💰 売上 5000 をめざそう',        s => s.earned, 5000, 500],
+  ['🍎 りんごの木をかいほう',        s => +s.unlocked.apple, 1, 500],
+  ['🙂 お客さん200人に売ろう',       s => s.served, 200, 800],
+  ['🍎 りんごを50こ売ろう',          s => s.sold.apple, 50, 1000],
+  ['⭐ お店ランク★10になろう',       s => rankOf(s.earned), 10, 2000],
+  ['💰 売上 50000 をめざそう',       s => s.earned, 50000, 3000],
+];
+
+// =====================================================================
+//  セーブデータ
+// =====================================================================
+function defaultSave() {
+  return {
+    v: 2, money: 0, earned: 0, served: 0, vip: 0, tutorial: 0,
+    unlocked: { tomato: true, corn: false, carrot: false, strawberry: false, apple: false, juice: false },
+    lv: { basket: 0, shoes: 0, fert: 0, shelf: 0, ads: 0, price: 0, staffSpeed: 0 },
+    staff: { cashier: false, helper1: false, helper2: false, helper3: false },
+    shelves: {}, sold: { tomato: 0, corn: 0, carrot: 0, strawberry: 0, apple: 0, juice: 0 },
+    claimed: [], juicer: { input: 0, output: 0 },
+  };
+}
+const save = defaultSave();
+try {
+  const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+  if (s) {
+    if (s.v === 2) {
+      Object.assign(save, s);
+      for (const k of ['unlocked', 'lv', 'staff', 'sold', 'juicer']) save[k] = Object.assign(defaultSave()[k], s[k]);
+    } else {
+      // 前の版のセーブを引き継ぐ
+      save.money = s.money || 0; save.earned = s.earned || 0; save.tutorial = s.tutorial || 0;
+      if (s.unlocked) { save.unlocked.corn = !!s.unlocked.corn; save.unlocked.carrot = !!s.unlocked.carrot; save.staff.cashier = !!s.unlocked.cashier; }
+      save.lv.basket = Math.min(s.basketLv || 0, BASKET.length - 1);
+      save.lv.shoes = Math.min(s.shoesLv || 0, SPEED.length - 1);
+      save.shelves = s.shelves || {};
+    }
+  }
+} catch (e) {}
+function writeSave() {
+  for (const t in shelves) save.shelves[t] = shelves[t].items.length;
+  if (juicer) save.juicer = { input: juicer.input, output: juicer.output };
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0;
+    if (save.earned > best) localStorage.setItem(BEST_KEY, String(save.earned));
+  } catch (e) {}
+}
+const capacity = () => BASKET[save.lv.basket];
+const walkSpeed = () => SPEED[save.lv.shoes];
+const shelfCap = () => SHELF_CAP[save.lv.shelf];
+const priceOf = (t) => Math.round(ITEMS[t].price * (1 + 0.15 * save.lv.price));
+const staffSpd = () => STAFF_SPEED[save.lv.staffSpeed];
+function rankOf(earned) { let r = 0; for (const t of RANKS) if (earned >= t) r++; return r; }
+
+// =====================================================================
+//  サウンド
+// =====================================================================
+let audio = null, muted = false;
+try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+const muteBtn = document.getElementById('muteBtn');
+const showMute = () => { muteBtn.textContent = muted ? '🔇' : '🔊'; };
+showMute();
+muteBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  muted = !muted;
+  try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (err) {}
+  showMute();
+});
+document.getElementById('backBtn').addEventListener('pointerdown', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  writeSave();
+  location.href = '../';
+});
+function initAudio() {
+  if (!audio) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) audio = new AC(); }
+  if (audio && audio.state === 'suspended') audio.resume();
+}
+function beep(freq, dur, type = 'sine', vol = 0.12, slideTo = null, delay = 0) {
+  if (!audio || muted) return;
+  const t = audio.currentTime + delay;
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const sfx = {
+  pick()   { beep(600 + Math.random() * 200, 0.08, 'triangle', 0.08, 900); },
+  place()  { beep(420, 0.07, 'triangle', 0.07, 300); },
+  scan()   { beep(1900, 0.07, 'square', 0.05); },
+  drawer() { beep(180, 0.12, 'triangle', 0.08, 120); },
+  cash()   { beep(1320, 0.12, 'square', 0.05); beep(1760, 0.25, 'square', 0.05, null, 0.08); },
+  coin()   { beep(1000 + Math.random() * 400, 0.05, 'sine', 0.06); },
+  pay()    { beep(300, 0.04, 'sine', 0.04); },
+  bag()    { beep(250, 0.1, 'triangle', 0.06, 400); },
+  happy()  { beep(660, 0.1, 'sine', 0.07); beep(880, 0.14, 'sine', 0.07, null, 0.09); },
+  angry()  { beep(200, 0.3, 'sawtooth', 0.05, 120); },
+  juice()  { beep(300, 0.2, 'sine', 0.05, 700); },
+  buy()    { beep(880, 0.08, 'triangle', 0.1); beep(1320, 0.14, 'triangle', 0.1, null, 0.08); },
+  unlock() { [523, 659, 784, 1046].forEach((f, i) => beep(f, 0.16, 'triangle', 0.12, null, i * 0.09)); },
+  rankup() { [523, 659, 784, 1046, 1318].forEach((f, i) => beep(f, 0.2, 'square', 0.06, null, i * 0.1)); },
+};
+
+// =====================================================================
+//  three.js の準備
+// =====================================================================
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight, false);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9fdcff);
+scene.fog = new THREE.Fog(0x9fdcff, 30, 60);
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 120);
+const CAM_OFFSET = new THREE.Vector3(0, 13, 10.5);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x7a9a6a, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 50 });
+scene.add(sun, sun.target);
+
+function resize() {
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.fov = camera.aspect < 0.7 ? 55 : 45;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+// iPhoneのSafariは下のバーで画面の高さが変わるので、こまめに合わせる
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+{ let lw = 0, lh = 0; setInterval(() => { if (window.innerWidth !== lw || window.innerHeight !== lh) { lw = window.innerWidth; lh = window.innerHeight; resize(); } }, 500); }
+resize();
+
+const matCache = {};
+const mat = (color, extra) => {
+  if (extra) return new THREE.MeshLambertMaterial({ color, ...extra });
+  return matCache[color] || (matCache[color] = new THREE.MeshLambertMaterial({ color }));
+};
+const M = {
+  grass: mat(0x7cc96b), dirt: mat(0x9a6b45), dirtDark: mat(0x7d5536),
+  floorA: mat(0xf4ead8), floorB: mat(0xe9dcc3),
+  wood: mat(0xc98b52), woodDark: mat(0x9b6538), white: mat(0xffffff),
+  leaf: mat(0x4fae4a), leafDark: mat(0x3d8f3a),
+  black: mat(0x222222), cash: mat(0x5fbf6a), cashDark: mat(0x3f9a4a),
+  red: mat(0xe85d5d), counter: mat(0x6ab0e8), paper: mat(0xd9b382), paperDark: mat(0xb8915e),
+  gold: mat(0xffc93c, { emissive: 0x553300 }),
+  ghost: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.25 }),
+};
+function box(w, h, d, m) { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.castShadow = true; o.receiveShadow = true; return o; }
+function sphere(r, m, seg = 14) { const o = new THREE.Mesh(new THREE.SphereGeometry(r, seg, Math.max(8, seg - 4)), m); o.castShadow = true; return o; }
+function cyl(rt, rb, h, m, seg = 12) { const o = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); o.castShadow = true; return o; }
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+function textTexture(text, w = 512, h = 128, bg = '#e85d5d', fg = '#fff', size = 72) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); }
+  g.fillStyle = fg; g.font = `900 ${size}px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 4);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+// =====================================================================
+//  アニメーションの道具
+// =====================================================================
+const tweens = [];
+function tween(dur, fn, done, delay = 0) { const t = { t: -delay, dur, fn, done }; tweens.push(t); return t; }
+const easeOutBack = (p) => 1 + 2.70158 * Math.pow(p - 1, 3) + 1.70158 * Math.pow(p - 1, 2);
+const easeInOut = (p) => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+function popIn(obj, s = 1, dur = 0.5, delay = 0) {
+  obj.scale.setScalar(0.001);
+  tween(dur, (p) => obj.scale.setScalar(Math.max(0.001, easeOutBack(p) * s)), null, delay);
+}
+function bounce(obj, amount = 0.25, dur = 0.3) {
+  const base = obj.userData.baseScale || (obj.userData.baseScale = obj.scale.x);
+  tween(dur, (p) => obj.scale.setScalar(base * (1 + Math.sin(p * Math.PI) * amount)), () => obj.scale.setScalar(base));
+}
+// 物を放物線で飛ばす（keep=true なら着いたあとも残す）
+function flyTo(mesh, from, toFn, { dur = 0.3, arc = 0.8, delay = 0, keep = false, scaleTo = null, onEnd = null } = {}) {
+  const startScale = mesh.scale.x;
+  mesh.position.copy(from);
+  if (delay > 0) mesh.visible = false;
+  scene.add(mesh);
+  tween(dur, (p) => {
+    mesh.visible = true;
+    const to = toFn();
+    const e = easeInOut(p);
+    mesh.position.lerpVectors(from, to, e);
+    mesh.position.y += Math.sin(p * Math.PI) * arc;
+    if (scaleTo !== null) mesh.scale.setScalar(startScale + (scaleTo - startScale) * p);
+  }, () => { if (!keep) scene.remove(mesh); if (onEnd) onEnd(); }, delay);
+}
+// 浮かぶ文字
+function floatText(text, pos, { color = '#ffffff', stroke = '#3a2a1a', size = 1, dur = 1.3, rise = 1.4 } = {}) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const g = c.getContext('2d');
+  g.font = '900 76px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.lineWidth = 14; g.strokeStyle = stroke; g.strokeText(text, 256, 68);
+  g.fillStyle = color; g.fillText(text, 256, 68);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+  sp.renderOrder = 20;
+  sp.scale.set(2.4 * size, 0.6 * size, 1);
+  sp.position.copy(pos);
+  scene.add(sp);
+  const y0 = pos.y;
+  tween(dur, (p) => {
+    sp.position.y = y0 + easeOutBack(Math.min(1, p * 1.5)) * rise * 0.6 + p * rise * 0.4;
+    sp.material.opacity = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3;
+  }, () => { scene.remove(sp); tex.dispose(); sp.material.dispose(); });
+}
+// 紙ふぶき
+const confettiGeo = new THREE.PlaneGeometry(0.14, 0.22);
+const confettiMats = [0xff5a5a, 0xffcf3f, 0x4fb8ff, 0x5fd16a, 0xb67cff, 0xff8fd0].map(c => new THREE.MeshBasicMaterial({ color: c, side: THREE.DoubleSide }));
+const confetti = [];
+function burst(pos, n = 40, power = 5) {
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(confettiGeo, confettiMats[i % confettiMats.length]);
+    m.position.copy(pos);
+    const a = Math.random() * Math.PI * 2, s = power * (0.4 + Math.random() * 0.6);
+    confetti.push({ m, vx: Math.cos(a) * s * 0.5, vy: s * (0.8 + Math.random() * 0.6), vz: Math.sin(a) * s * 0.5, r: Math.random() * 10, life: 1.6 + Math.random() * 0.6, t: 0 });
+    scene.add(m);
+  }
+}
+function updateConfetti(dt) {
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const c = confetti[i];
+    c.t += dt; c.vy -= 9 * dt; c.vx *= 0.98; c.vz *= 0.98;
+    if (c.vy < -2) c.vy = -2;   // ひらひら落ちる
+    c.m.position.x += c.vx * dt; c.m.position.y += c.vy * dt; c.m.position.z += c.vz * dt;
+    c.m.rotation.x += c.r * dt; c.m.rotation.y += c.r * 0.7 * dt;
+    if (c.t > c.life || c.m.position.y < 0) { scene.remove(c.m); confetti.splice(i, 1); }
+  }
+}
+let camShake = 0;
+
+// =====================================================================
+//  地面・お店
+// =====================================================================
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), M.grass);
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+scene.add(ground);
+{
+  const tileGeo = new THREE.PlaneGeometry(1, 1);
+  for (let x = -7; x < 7; x++) for (let z = -5; z < 7; z++) {
+    const t = new THREE.Mesh(tileGeo, (x + z) % 2 === 0 ? M.floorA : M.floorB);
+    t.rotation.x = -Math.PI / 2; t.position.set(x + 0.5, 0.01, z + 0.5); t.receiveShadow = true;
+    scene.add(t);
+  }
+  // 畑への小道
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(14, 9), mat(0xd9c49a));
+  path.rotation.x = -Math.PI / 2; path.position.set(0, 0.005, -10.5); path.receiveShadow = true;
+  scene.add(path);
+}
+const WALLS = [];
+function wall(x, z, w, d) { const o = box(w, 0.6, d, M.white); o.position.set(x, 0.3, z); scene.add(o); WALLS.push({ x1: x - w / 2, x2: x + w / 2, z1: z - d / 2, z2: z + d / 2 }); }
+wall(-7, 1, 0.3, 12); wall(7, 1, 0.3, 12);
+wall(-5.5, -5, 3, 0.3); wall(5.5, -5, 3, 0.3);
+{
+  const p1 = cyl(0.08, 0.08, 3, M.woodDark); p1.position.set(-4.6, 1.5, 7);
+  const p2 = cyl(0.08, 0.08, 3, M.woodDark); p2.position.set(-1.4, 1.5, 7);
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.9, 0.15), [M.red, M.red, M.red, M.red, new THREE.MeshBasicMaterial({ map: textTexture('わくわくマート') }), M.red]);
+  sign.position.set(-3, 3, 7); sign.castShadow = true;
+  scene.add(p1, p2, sign);
+}
+const decoTrees = [];
+function tree(x, z, s = 1) {
+  const g = new THREE.Group();
+  const t = cyl(0.15 * s, 0.2 * s, 1.2 * s, M.woodDark); t.position.y = 0.6 * s;
+  const l = sphere(0.9 * s, M.leafDark, 10); l.position.y = 1.6 * s;
+  g.add(t, l); g.position.set(x, 0, z); scene.add(g); decoTrees.push(l);
+}
+[[-10.5, 4], [10.5, 2], [-11, -4], [11, -8], [-9.5, 9], [9.5, 9], [-12, -14], [12, -15], [-11.5, -10], [11.5, -12]].forEach(([x, z]) => tree(x, z, 1 + Math.random() * 0.4));
+// 花
+for (let i = 0; i < 30; i++) {
+  const x = (Math.random() - 0.5) * 30, z = (Math.random() - 0.5) * 34 - 2;
+  if (Math.abs(x) < 8.5 && z > -16 && z < 8) continue;
+  const f = sphere(0.09, mat([0xff7aa8, 0xffe14d, 0xffffff, 0xb08cff][i % 4]), 6);
+  f.position.set(x, 0.12, z); f.castShadow = false; scene.add(f);
+}
+
+// =====================================================================
+//  商品の見た目
+// =====================================================================
+const PROTO = {};
+function buildItem(type) {
+  const g = new THREE.Group();
+  if (type === 'tomato') {
+    const b = sphere(0.2, mat(0xe8433a), 12); b.scale.y = 0.85; b.position.y = 0.17; g.add(b);
+    const s = cyl(0.03, 0.03, 0.08, M.leaf, 6); s.position.y = 0.35; g.add(s);
+  } else if (type === 'corn') {
+    const b = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.22, 4, 10), mat(0xf5c842)); b.position.y = 0.22; b.castShadow = true; g.add(b);
+    const l = cyl(0.0, 0.14, 0.2, M.leaf, 8); l.position.y = 0.1; g.add(l);
+  } else if (type === 'carrot') {
+    const b = cyl(0.13, 0.02, 0.36, mat(0xf08a24), 10); b.position.y = 0.2; g.add(b);
+    const l = cyl(0.0, 0.08, 0.16, M.leaf, 6); l.rotation.x = Math.PI; l.position.y = 0.44; g.add(l);
+  } else if (type === 'strawberry') {
+    const b = cyl(0.17, 0.03, 0.3, mat(0xff3b5c), 10); b.position.y = 0.18; g.add(b);
+    const top = cyl(0.17, 0.17, 0.03, M.leaf, 8); top.position.y = 0.34; g.add(top);
+    for (let i = 0; i < 6; i++) { const seed = sphere(0.015, mat(0xffe680), 4); const a = i * 1.05; seed.position.set(Math.cos(a) * 0.11, 0.24 - (i % 2) * 0.06, Math.sin(a) * 0.11); g.add(seed); }
+  } else if (type === 'apple') {
+    const b = sphere(0.21, mat(0xd8283a), 12); b.position.y = 0.2; b.scale.y = 0.92; g.add(b);
+    const s = cyl(0.02, 0.02, 0.12, M.woodDark, 5); s.position.y = 0.42; g.add(s);
+    const l = sphere(0.06, M.leaf, 6); l.scale.set(1.4, 0.3, 0.7); l.position.set(0.07, 0.43, 0); g.add(l);
+  } else if (type === 'juice') {
+    const b = box(0.24, 0.34, 0.24, M.white); b.position.y = 0.17; g.add(b);
+    const band = box(0.25, 0.14, 0.25, mat(0xe8433a)); band.position.y = 0.17; g.add(band);
+    const roof = cyl(0.0, 0.18, 0.1, M.white, 4); roof.rotation.y = Math.PI / 4; roof.position.y = 0.39; g.add(roof);
+    const straw = cyl(0.015, 0.015, 0.2, mat(0x4fb8ff), 5); straw.position.set(0.06, 0.48, 0); straw.rotation.z = 0.3; g.add(straw);
+  }
+  return g;
+}
+for (const t of SELLS) PROTO[t] = buildItem(t);
+const makeItem = (t) => PROTO[t].clone();
+const ITEM_H = 0.34;
+
+// =====================================================================
+//  キャラクター
+// =====================================================================
+function makeCharacter(bodyColor, opts = {}) {
+  const g = new THREE.Group();
+  const inner = new THREE.Group(); g.add(inner);   // 跳ねたり傾いたりする部分
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.45, 6, 14), mat(bodyColor));
+  body.position.y = 0.72; body.castShadow = true; inner.add(body);
+  const belly = sphere(0.3, M.white, 12); belly.scale.set(1, 1.1, 0.5); belly.position.set(0, 0.6, 0.27); inner.add(belly);
+  for (const sx of [-0.15, 0.15]) {
+    const eye = sphere(0.065, M.black, 8); eye.position.set(sx, 1.0, 0.38); inner.add(eye);
+    const shine = sphere(0.02, M.white, 6); shine.position.set(sx + 0.02, 1.03, 0.44); inner.add(shine);
+  }
+  for (const sx of [-0.27, 0.27]) { const ch = sphere(0.06, mat(0xff9aa8), 8); ch.scale.z = 0.4; ch.position.set(sx, 0.88, 0.34); inner.add(ch); }
+  const mouth = sphere(0.05, mat(0x7a3b2e), 8); mouth.scale.set(1.3, 0.6, 0.5); mouth.position.set(0, 0.86, 0.41); inner.add(mouth);
+  const feet = [];
+  for (const sx of [-0.2, 0.2]) { const foot = sphere(0.14, mat(opts.feet || 0x444444), 8); foot.scale.set(1, 0.6, 1.3); foot.position.set(sx, 0.08, 0.05); g.add(foot); feet.push(foot); }
+  if (opts.cap) {
+    const cap = cyl(0.36, 0.42, 0.18, mat(opts.cap), 16); cap.position.y = 1.32; inner.add(cap);
+    const brim = cyl(0.3, 0.3, 0.04, mat(opts.cap), 16); brim.scale.z = 0.6; brim.position.set(0, 1.25, 0.3); inner.add(brim);
+  }
+  if (opts.crown) {
+    const cr = cyl(0.22, 0.26, 0.2, M.gold, 8); cr.position.y = 1.36; inner.add(cr);
+    for (let i = 0; i < 5; i++) { const sp = cyl(0, 0.06, 0.14, M.gold, 4); const a = i / 5 * Math.PI * 2; sp.position.set(Math.cos(a) * 0.2, 1.52, Math.sin(a) * 0.2); inner.add(sp); }
+  }
+  if (opts.straw) {
+    const hat = cyl(0.55, 0.55, 0.05, mat(0xf2d27a), 16); hat.position.y = 1.25; inner.add(hat);
+    const top = cyl(0.28, 0.32, 0.22, mat(0xf2d27a), 16); top.position.y = 1.36; inner.add(top);
+  }
+  if (opts.apron) { const a = box(0.55, 0.45, 0.05, mat(opts.apron)); a.position.set(0, 0.5, 0.4); a.castShadow = false; inner.add(a); }
+  g.userData = { inner, feet, mouth, hop: 0 };
+  return g;
+}
+function animateChar(ch, moving, t, dt) {
+  const u = ch.userData;
+  if (u.hop > 0) u.hop = Math.max(0, u.hop - dt * 2.5);
+  const hopY = Math.sin(u.hop * Math.PI) * 0.5 * (u.hop > 0 ? 1 : 0);
+  if (moving) {
+    u.inner.position.y = Math.abs(Math.sin(t * 12)) * 0.08 + hopY;
+    u.inner.rotation.z = Math.sin(t * 12) * 0.06;
+    u.feet[0].position.z = 0.05 + Math.sin(t * 12) * 0.15;
+    u.feet[1].position.z = 0.05 - Math.sin(t * 12) * 0.15;
+  } else {
+    u.inner.position.y = Math.sin(t * 3) * 0.02 + hopY;
+    u.inner.rotation.z *= 0.8;
+    u.feet[0].position.z = u.feet[1].position.z = 0.05;
+  }
+}
+const hop = (ch) => { ch.userData.hop = 1; };
+
+// 持ち物（積み上げ）
+function makeCarrier(obj, y = 0.55, z = 0.55, scale = 0.9) {
+  const group = new THREE.Group(); group.position.set(0, y, z); obj.add(group);
+  return { group, items: [], pending: 0, scale, step: ITEM_H * scale };
+}
+function carrierTop(holder, car) {
+  return holder.localToWorld(V(0, car.group.position.y + car.items.length * car.step, car.group.position.z));
+}
+function carrierAdd(car, type) {
+  const m = makeItem(type); m.scale.setScalar(car.scale);
+  m.position.y = car.items.length * car.step;
+  car.group.add(m); car.items.push({ type, mesh: m });
+  bounce(m, 0.3, 0.2);
+}
+function carrierRemove(car, type) {
+  const i = car.items.map(c => c.type).lastIndexOf(type);
+  if (i < 0) return false;
+  car.group.remove(car.items[i].mesh);
+  car.items.splice(i, 1);
+  car.items.forEach((c, k) => { c.mesh.position.y = k * car.step; });
+  return true;
+}
+
+// =====================================================================
+//  プレイヤー
+// =====================================================================
+const player = { obj: makeCharacter(0xffb347, { cap: 0xe85d5d, apron: 0x4f9de8, feet: 0x8a4b2a }), pos: V(0, 0, 3), dir: 0, moving: false };
+player.car = makeCarrier(player.obj);
+scene.add(player.obj);
+const playerTop = () => carrierTop(player.obj, player.car);
+const playerFree = () => capacity() - player.car.items.length - player.car.pending;
+
+// =====================================================================
+//  畑
+// =====================================================================
+const fields = {};
+function makeField(type) {
+  const [cx, cz] = FIELD_POS[type];
+  const f = { type, cx, cz, plants: [], group: new THREE.Group(), w: 3.4, d: 2.4, timer: 0 };
+  const soil = box(f.w, 0.12, f.d, M.dirt); soil.position.set(cx, 0.06, cz); soil.castShadow = false; f.group.add(soil);
+  const tree = type === 'apple';
+  const cols = tree ? 2 : 3, rows = 2;
+  for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) {
+    const px = cx + (tree ? -0.85 + i * 1.7 : -1.1 + i * 1.1), pz = cz - 0.55 + j * 1.1;
+    const p = { x: px, z: pz, grow: Math.random() * 0.6 + 0.4, base: new THREE.Group(), fruit: makeItem(type), ripe: false };
+    p.base.position.set(px, 0, pz);
+    if (!tree) { const row = box(0.8, 0.06, 0.8, M.dirtDark); row.position.set(px, 0.14, pz); row.castShadow = false; f.group.add(row); }
+    if (type === 'tomato') {
+      const bush = sphere(0.36, M.leaf, 10); bush.scale.y = 0.8; bush.position.y = 0.42; p.base.add(bush);
+      p.fruitPos = V(px + 0.12, 0.45, pz + 0.22);
+    } else if (type === 'corn') {
+      const stalk = cyl(0.06, 0.08, 1.3, M.leaf, 6); stalk.position.y = 0.8; p.base.add(stalk);
+      for (const r of [0.6, -0.8]) { const lf = box(0.5, 0.04, 0.14, M.leafDark); lf.position.set(Math.sign(r) * 0.2, 0.9 + r * 0.1, 0); lf.rotation.z = r; p.base.add(lf); }
+      p.fruitPos = V(px + 0.12, 0.6, pz + 0.12);
+    } else if (type === 'carrot') {
+      const leaves = cyl(0.0, 0.22, 0.35, M.leaf, 7); leaves.rotation.x = Math.PI; leaves.position.y = 0.4; p.base.add(leaves);
+      p.fruitPos = V(px, 0.12, pz);
+    } else if (type === 'strawberry') {
+      const bush = sphere(0.3, M.leafDark, 9); bush.scale.y = 0.5; bush.position.y = 0.25; p.base.add(bush);
+      for (let k = 0; k < 3; k++) { const fl = sphere(0.05, M.white, 6); fl.position.set(Math.cos(k * 2) * 0.22, 0.36, Math.sin(k * 2) * 0.22); p.base.add(fl); }
+      p.fruitPos = V(px + 0.1, 0.32, pz + 0.24);
+    } else if (type === 'apple') {
+      const trunk = cyl(0.12, 0.16, 1.1, M.woodDark, 8); trunk.position.y = 0.55; p.base.add(trunk);
+      const crown = sphere(0.62, M.leaf, 12); crown.position.y = 1.45; p.base.add(crown);
+      p.fruitPos = V(px + 0.25, 1.15, pz + 0.45);
+    }
+    p.fruit.position.copy(p.fruitPos);
+    f.group.add(p.base, p.fruit);
+    f.plants.push(p);
+  }
+  scene.add(f.group);
+  fields[type] = f;
+  return f;
+}
+const growTime = (t) => ITEMS[t].grow * FERT[save.lv.fert];
+function harvestOne(f, near, onPick) {
+  let best = null, bd = 1e9;
+  for (const p of f.plants) if (p.grow >= 1) { const d = (p.x - near.x) ** 2 + (p.z - near.z) ** 2; if (d < bd) { bd = d; best = p; } }
+  if (!best) return false;
+  best.grow = 0; best.ripe = false;
+  // 葉っぱがゆれる
+  const b = best.base;
+  tween(0.35, (p) => { b.scale.set(1 + Math.sin(p * Math.PI * 2) * 0.12, 1 - Math.sin(p * Math.PI * 2) * 0.12, 1 + Math.sin(p * Math.PI * 2) * 0.12); }, () => b.scale.set(1, 1, 1));
+  onPick(best);
+  return true;
+}
+function updateField(f, dt) {
+  for (const p of f.plants) {
+    if (p.grow < 1) {
+      p.grow = Math.min(1, p.grow + dt / growTime(f.type));
+      const s = p.grow < 0.15 ? 0 : 0.3 + p.grow * 0.6;
+      p.fruit.scale.setScalar(Math.max(0.001, s));
+      p.fruit.visible = s > 0;
+      if (p.grow >= 1 && !p.ripe) {
+        // 実ったときにポンッとはずむ
+        p.ripe = true;
+        const fr = p.fruit;
+        tween(0.35, (q) => fr.scale.setScalar(0.9 + Math.sin(q * Math.PI) * 0.35), () => fr.scale.setScalar(1));
+      }
+    } else {
+      p.fruit.position.y = p.fruitPos.y + Math.sin(elapsed * 3 + p.x) * 0.03;
+    }
+  }
+  const inside = Math.abs(player.pos.x - f.cx) < f.w / 2 + 0.3 && Math.abs(player.pos.z - f.cz) < f.d / 2 + 0.3;
+  f.timer -= dt;
+  if (inside && f.timer <= 0 && playerFree() > 0) {
+    harvestOne(f, player.pos, (p) => {
+      f.timer = 0.12;
+      player.car.pending++;
+      flyTo(makeItem(f.type), p.fruitPos.clone(), playerTop, { dur: 0.22, onEnd: () => { player.car.pending--; carrierAdd(player.car, f.type); updateHud(); } });
+      sfx.pick();
+    });
+  }
+}
+
+// =====================================================================
+//  棚
+// =====================================================================
+const shelves = {};
+function makeShelf(type) {
+  const [cx, cz] = SHELF_POS[type];
+  const s = { type, cx, cz, items: [], group: new THREE.Group(), timer: 0, flying: 0 };
+  const base = box(2.4, 0.5, 0.9, M.wood); base.position.set(cx, 0.25, cz); s.group.add(base);
+  const back = box(2.4, 1.5, 0.15, M.woodDark); back.position.set(cx, 0.75, cz - 0.4); s.group.add(back);
+  const mid = box(2.4, 0.08, 0.6, M.wood); mid.position.set(cx, 1.0, cz - 0.15); s.group.add(mid);
+  s.tag = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.32), new THREE.MeshBasicMaterial());
+  s.tag.position.set(cx, 0.28, cz + 0.46); s.group.add(s.tag);
+  refreshTag(s);
+  scene.add(s.group);
+  shelves[type] = s;
+  return s;
+}
+function refreshTag(s) {
+  if (s.tag.material.map) s.tag.material.map.dispose();
+  s.tag.material.map = textTexture(`${ITEMS[s.type].emoji} ${priceOf(s.type)}円`, 384, 112, '#fff7e8', '#3a2a1a', 60);
+  s.tag.material.needsUpdate = true;
+}
+function shelfSlot(s, i) {
+  // 4列 × 前後2列 × 上下2段 = 最大16こ
+  const col = i % 4, layer = Math.floor(i / 4);           // layer: 0 下前, 1 上前, 2 下奥, 3 上奥
+  const up = layer % 2 === 1, back = layer >= 2;
+  const z = up ? (back ? -0.32 : -0.05) : (back ? -0.15 : 0.15);
+  return V(s.cx - 0.85 + col * 0.57, up ? 1.04 : 0.5, s.cz + z);
+}
+const shelfFront = (s) => V(s.cx, 0, s.cz + 1.2);
+function addToShelf(s, type, animate = true) {
+  const m = makeItem(type);
+  m.position.copy(shelfSlot(s, s.items.length));
+  s.group.add(m); s.items.push(m);
+  if (animate) bounce(m, 0.35, 0.25);
+}
+function takeFromShelf(s) {
+  const m = s.items.pop();
+  if (!m) return null;
+  s.group.remove(m);
+  return s.group.localToWorld(m.position.clone());
+}
+// 誰か（プレイヤーかスタッフ）が棚に置く
+function depositTo(s, holder, car) {
+  if (s.items.length + s.flying >= shelfCap() || !car.items.some(c => c.type === s.type)) return false;
+  const from = carrierTop(holder, car);
+  carrierRemove(car, s.type);
+  const slot = s.items.length + s.flying;
+  s.flying++;
+  flyTo(makeItem(s.type), from, () => shelfSlot(s, slot), { dur: 0.2, arc: 0.6, onEnd: () => { s.flying--; addToShelf(s, s.type); } });
+  sfx.place();
+  return true;
+}
+function updateShelf(s, dt) {
+  const front = shelfFront(s);
+  s.timer -= dt;
+  if (Math.hypot(player.pos.x - front.x, player.pos.z - front.z) < 1.4 && s.timer <= 0) {
+    if (depositTo(s, player.obj, player.car)) {
+      s.timer = 0.1; updateHud();
+      if (save.tutorial === 1) setTutorial(2);
+    }
+  }
+}
+
+// =====================================================================
+//  ジューサー（トマト2こ → ジュース1こ）
+// =====================================================================
+let juicer = null;
+function makeJuicer() {
+  const [cx, cz] = JUICER_POS;
+  const j = { cx, cz, input: Math.min(save.juicer.input || 0, 10), output: Math.min(save.juicer.output || 0, 8), t: 0, group: new THREE.Group(), timerIn: 0, timerOut: 0,
+    inSpot: V(cx - 0.8, 0, cz + 1.25), outSpot: V(cx + 0.8, 0, cz + 1.25), inItems: [], outItems: [] };
+  const base = box(2.6, 0.2, 1.4, mat(0x8a8f99)); base.position.set(cx, 0.1, cz - 0.1); j.group.add(base);
+  const body = cyl(0.5, 0.55, 1.1, mat(0xe85d5d), 16); body.position.set(cx, 0.75, cz - 0.2); j.group.add(body);
+  const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.7, 16), new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
+  jar.position.set(cx, 1.65, cz - 0.2); j.group.add(jar);
+  j.liquid = cyl(0.34, 0.34, 0.66, mat(0xff4a3a), 16); j.liquid.position.set(cx, 1.32, cz - 0.2); j.liquid.scale.y = 0.01; j.liquid.castShadow = false; j.group.add(j.liquid);
+  j.blade = box(0.6, 0.04, 0.08, mat(0xdddddd)); j.blade.position.set(cx, 1.4, cz - 0.2); j.group.add(j.blade);
+  const lid = cyl(0.42, 0.42, 0.08, mat(0x555555), 16); lid.position.set(cx, 2.02, cz - 0.2); j.group.add(lid);
+  j.hopper = box(0.7, 0.4, 0.7, M.wood); j.hopper.position.set(cx - 0.85, 0.4, cz); j.group.add(j.hopper);
+  j.tray = box(0.8, 0.12, 0.8, mat(0xdddddd)); j.tray.position.set(cx + 0.9, 0.26, cz); j.group.add(j.tray);
+  j.sign = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.35), new THREE.MeshBasicMaterial({ map: textTexture('🍅🍅 → 🧃', 512, 128, '#fff7e8', '#3a2a1a', 64) }));
+  j.sign.position.set(cx, 0.75, cz + 0.36); j.group.add(j.sign);
+  scene.add(j.group);
+  j.markIn = floorMark(j.inSpot.x, j.inSpot.z, 0xe8433a, 0.55);
+  j.markOut = floorMark(j.outSpot.x, j.outSpot.z, 0x4fb8ff, 0.55);
+  juicer = j;
+  for (let i = 0; i < j.input; i++) juicerShowIn(false);
+  for (let i = 0; i < j.output; i++) juicerShowOut(false);
+  return j;
+}
+function juicerShowIn(anim = true) {
+  const j = juicer, i = j.inItems.length;
+  const m = makeItem('tomato'); m.scale.setScalar(0.6);
+  m.position.set(j.cx - 0.85 + (i % 3 - 1) * 0.18, 0.6 + Math.floor(i / 3) * 0.12, j.cz + ((i % 2) - 0.5) * 0.15);
+  j.group.add(m); j.inItems.push(m);
+  if (anim) bounce(m, 0.3, 0.2);
+}
+function juicerShowOut(anim = true) {
+  const j = juicer, i = j.outItems.length;
+  const m = makeItem('juice'); m.scale.setScalar(0.8);
+  m.position.set(j.cx + 0.75 + (i % 2) * 0.3, 0.32 + Math.floor(i / 4) * 0.3, j.cz - 0.15 + (Math.floor(i / 2) % 2) * 0.3);
+  j.group.add(m); j.outItems.push(m);
+  if (anim) popIn(m, 0.8, 0.4);
+}
+function juicerFeed(holder, car) {
+  const j = juicer;
+  if (j.input + (j.feeding || 0) >= 10 || !car.items.some(c => c.type === 'tomato')) return false;
+  const from = carrierTop(holder, car);
+  carrierRemove(car, 'tomato');
+  j.feeding = (j.feeding || 0) + 1;
+  flyTo(makeItem('tomato'), from, () => V(j.cx - 0.85, 0.7, j.cz), { dur: 0.2, onEnd: () => { j.feeding--; j.input++; juicerShowIn(); } });
+  sfx.place();
+  return true;
+}
+function juicerTake(holder, car) {
+  const j = juicer;
+  if (j.output <= 0) return false;
+  j.output--;
+  const m = j.outItems.pop(); j.group.remove(m);
+  const from = j.group.localToWorld(m.position.clone());
+  car.pending++;
+  flyTo(makeItem('juice'), from, () => carrierTop(holder, car), { dur: 0.22, onEnd: () => { car.pending--; carrierAdd(car, 'juice'); updateHud(); } });
+  sfx.pick();
+  return true;
+}
+function updateJuicer(dt) {
+  const j = juicer;
+  const working = j.input >= 2 && j.output < 8;
+  if (working) {
+    j.t += dt;
+    j.blade.rotation.y += dt * 25;
+    j.liquid.scale.y = Math.max(0.01, j.t / 2.2);
+    j.liquid.position.y = 1.32 + j.liquid.scale.y * 0.33 - 0.33;
+    j.group.children[1].position.x = j.cx + Math.sin(elapsed * 60) * 0.015;   // ブルブル
+    if (j.t >= 2.2) {
+      j.t = 0; j.input -= 2; j.output++;
+      for (let k = 0; k < 2; k++) { const m = j.inItems.pop(); if (m) j.group.remove(m); }
+      juicerShowOut();
+      j.liquid.scale.y = 0.01;
+      sfx.juice();
+    }
+  } else {
+    j.blade.rotation.y += dt * 2;
+  }
+  const din = Math.hypot(player.pos.x - j.inSpot.x, player.pos.z - j.inSpot.z);
+  const dout = Math.hypot(player.pos.x - j.outSpot.x, player.pos.z - j.outSpot.z);
+  j.timerIn -= dt; j.timerOut -= dt;
+  if (din < 0.75 && j.timerIn <= 0 && juicerFeed(player.obj, player.car)) { j.timerIn = 0.12; updateHud(); }
+  if (dout < 0.75 && j.timerOut <= 0 && playerFree() > 0 && juicerTake(player.obj, player.car)) j.timerOut = 0.15;
+}
+
+// =====================================================================
+//  レジ（会計アニメーション）
+// =====================================================================
+const REG = { x: 4.4, z: 4.4 };
+const CASH_SPOT = V(5.8, 0, 4.4);
+const MONEY_SPOT = V(4.4, 0, 6.1);
+const COUNTER_Y = 1.06;
+const counter = new THREE.Group();
+const reg = { busy: false, cu: null, phase: '', t: 0, i: 0, items: [], total: 0, pending: 0, bag: null };
+{
+  const c = box(1.6, 1.0, 0.9, M.counter); c.position.set(REG.x, 0.5, REG.z); counter.add(c);
+  const top = box(1.7, 0.08, 1.0, M.white); top.position.set(REG.x, 1.02, REG.z); counter.add(top);
+  // スキャナー
+  const sc = box(0.32, 0.06, 0.32, M.black); sc.position.set(REG.x - 0.05, 1.08, REG.z - 0.12); counter.add(sc);
+  reg.light = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.24), new THREE.MeshBasicMaterial({ color: 0x661111 }));
+  reg.light.rotation.x = -Math.PI / 2; reg.light.position.set(REG.x - 0.05, 1.115, REG.z - 0.12); counter.add(reg.light);
+  // レジ本体と画面
+  const rb = box(0.5, 0.3, 0.42, mat(0x555555)); rb.position.set(REG.x + 0.5, 1.22, REG.z - 0.2); counter.add(rb);
+  reg.drawer = box(0.46, 0.12, 0.36, mat(0x777777)); reg.drawer.position.set(REG.x + 0.5, 1.12, REG.z - 0.15); counter.add(reg.drawer);
+  reg.screenCanvas = document.createElement('canvas'); reg.screenCanvas.width = 256; reg.screenCanvas.height = 128;
+  reg.screenTex = new THREE.CanvasTexture(reg.screenCanvas); reg.screenTex.colorSpace = THREE.SRGBColorSpace;
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.31), new THREE.MeshBasicMaterial({ map: reg.screenTex }));
+  scr.position.set(REG.x + 0.5, 1.6, REG.z - 0.25); scr.rotation.x = -0.35; counter.add(scr);
+  const pole = cyl(0.03, 0.03, 0.25, mat(0x555555), 6); pole.position.set(REG.x + 0.5, 1.42, REG.z - 0.3); counter.add(pole);
+}
+scene.add(counter);
+function drawScreen(text, flash = false) {
+  const g = reg.screenCanvas.getContext('2d');
+  g.fillStyle = flash ? '#3a6b2a' : '#1f3d17'; g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#9dff7a';
+  let size = 56;
+  do { g.font = `900 ${size}px -apple-system, "Hiragino Sans", sans-serif`; size -= 4; } while (g.measureText(text).width > 236 && size > 20);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 66);
+  reg.screenTex.needsUpdate = true;
+}
+drawScreen('いらっしゃい');
+function floorMark(x, z, color, r = 0.6) {
+  const m = new THREE.Mesh(new THREE.RingGeometry(r - 0.08, r, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, 0.03, z); scene.add(m); return m;
+}
+const cashMark = floorMark(CASH_SPOT.x, CASH_SPOT.z, 0x4f9de8);
+floorMark(MONEY_SPOT.x, MONEY_SPOT.z, 0x5fbf6a, 0.7);
+const counterSlot = (i) => V(REG.x - 0.62 + (i % 3) * 0.17, COUNTER_Y + 0.02 + Math.floor(i / 6) * 0.2, REG.z + 0.18 - (Math.floor(i / 3) % 2) * 0.22);
+const SCAN_POS = V(REG.x - 0.05, COUNTER_Y + 0.1, REG.z - 0.12);
+const BAG_POS = V(REG.x + 0.2, COUNTER_Y, REG.z + 0.22);
+function makePaperBag() {
+  const g = new THREE.Group();
+  const b = box(0.42, 0.46, 0.28, M.paper); b.position.y = 0.23; g.add(b);
+  const top = box(0.43, 0.06, 0.29, M.paperDark); top.position.y = 0.44; g.add(top);
+  const h = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.02, 6, 12, Math.PI), M.paperDark); h.position.y = 0.46; g.add(h);
+  return g;
+}
+const playerAtCash = () => Math.hypot(player.pos.x - CASH_SPOT.x, player.pos.z - CASH_SPOT.z) < 0.8;
+const cashierActive = () => playerAtCash() || save.staff.cashier;
+
+function updateRegister(dt) {
+  const front = queue[0];
+  if (!reg.busy) {
+    if (front && front.arrived && cashierActive()) {
+      reg.busy = true; reg.cu = front; front.checkingOut = true;
+      reg.phase = 'unload'; reg.t = 0.2; reg.items = []; reg.total = 0; reg.i = 0; reg.pending = 0;
+      drawScreen('💰0');
+      setBubble(front, '🙂');
+    }
+    return;
+  }
+  if (!cashierActive()) return;    // レジに誰もいないと止まる
+  const spd = playerAtCash() ? 1.2 : 0.9 * staffSpd();
+  reg.t -= dt * spd;
+  if (reg.t > 0) return;
+  const cu = reg.cu;
+  switch (reg.phase) {
+    case 'unload': {
+      // カゴから商品を1こずつカウンターへ
+      if (cu.car.items.length) {
+        const it = cu.car.items[cu.car.items.length - 1];
+        const from = cu.car.group.localToWorld(it.mesh.position.clone());
+        carrierRemove(cu.car, it.type);
+        const m = makeItem(it.type); m.scale.setScalar(0.7);
+        const slot = reg.items.length;
+        reg.items.push({ type: it.type, mesh: m });
+        reg.pending++;
+        flyTo(m, from, () => counterSlot(slot), { dur: 0.22, arc: 0.5, keep: true, onEnd: () => { reg.pending--; sfx.place(); } });
+        reg.t = 0.14;
+      } else if (reg.pending === 0) {
+        reg.phase = 'scan'; reg.t = 0.25;
+        reg.bag = makePaperBag(); reg.bag.position.copy(BAG_POS); scene.add(reg.bag); popIn(reg.bag, 1, 0.35);
+      }
+      break;
+    }
+    case 'scan': {
+      if (reg.i < reg.items.length) {
+        const it = reg.items[reg.i++];
+        const m = it.mesh, from = m.position.clone();
+        reg.pending++;
+        // スキャナーの上へ → ピッ → 紙袋へ
+        tween(0.12, (p) => m.position.lerpVectors(from, SCAN_POS, easeInOut(p)), () => {
+          sfx.scan();
+          reg.light.material.color.setHex(0xff3030);
+          tween(0.1, () => {}, () => reg.light.material.color.setHex(0x661111));
+          reg.total += priceOf(it.type);
+          drawScreen(`💰${reg.total}`, true);
+          setTimeout(() => drawScreen(`💰${reg.total}`), 90);
+          const s0 = m.scale.x;
+          tween(0.16, (p) => { m.position.lerpVectors(SCAN_POS, V(BAG_POS.x, BAG_POS.y + 0.5, BAG_POS.z), p); m.position.y += Math.sin(p * Math.PI) * 0.3; m.scale.setScalar(s0 * (1 - p * 0.7)); },
+            () => { scene.remove(m); reg.pending--; if (reg.bag) bounce(reg.bag, 0.12, 0.15); });
+        });
+        reg.t = 0.24;
+      } else if (reg.pending === 0) {
+        reg.phase = 'pay'; reg.t = 0.15;
+      }
+      break;
+    }
+    case 'pay': {
+      // お客さんがお札を出す → 引き出しが開く
+      hop(cu.obj);
+      const n = Math.min(6, 2 + Math.floor(reg.total / 20));
+      for (let k = 0; k < n; k++) {
+        const bill = box(0.3, 0.03, 0.16, M.cash);
+        flyTo(bill, cu.obj.position.clone().add(V(0, 1.0, 0)), () => V(REG.x + 0.5, 1.2, REG.z + 0.05), { dur: 0.3, arc: 0.6, delay: k * 0.07 });
+      }
+      const d = reg.drawer;
+      tween(0.18, (p) => { d.position.z = REG.z - 0.15 + p * 0.3; }, null, 0.1);
+      setTimeout(() => sfx.drawer(), 100);
+      reg.phase = 'paid'; reg.t = 0.6;
+      break;
+    }
+    case 'paid': {
+      // チーン！ → お金がたまる場所へ
+      sfx.cash();
+      const total = reg.total + (cu.vip ? Math.round(reg.total * 0.5) : 0);
+      floatText(`+💰${total}`, V(REG.x + 0.4, 2.0, REG.z), { color: '#ffe066' });
+      if (cu.vip) setTimeout(() => floatText('👑 チップ！', V(REG.x - 0.4, 2.3, REG.z), { color: '#ffffff', size: 0.8 }), 250);
+      drawScreen('ありがとう');
+      const d = reg.drawer;
+      tween(0.18, (p) => { d.position.z = REG.z + 0.15 - p * 0.3; }, null, 0.3);
+      const n = Math.min(6, 2 + Math.floor(total / 20));
+      for (let k = 0; k < n; k++) {
+        const bill = box(0.3, 0.03, 0.16, M.cash);
+        flyTo(bill, V(REG.x + 0.5, 1.2, REG.z), () => V(MONEY_SPOT.x, 0.3, MONEY_SPOT.z), { dur: 0.35, arc: 0.8, delay: 0.15 + k * 0.06, onEnd: k === n - 1 ? () => addMoney(total) : null });
+      }
+      // 記録
+      save.earned += total; save.served++;
+      if (cu.vip) save.vip++;
+      for (const t of cu.bought) save.sold[t]++;
+      checkRank();
+      if (save.tutorial === 3) setTutorial(4);
+      reg.phase = 'bag'; reg.t = 0.45;
+      break;
+    }
+    case 'bag': {
+      // 紙袋をわたす
+      const bag = reg.bag; reg.bag = null;
+      const from = bag.position.clone();
+      scene.remove(bag);
+      sfx.bag();
+      flyTo(bag, from, () => cu.car.group.localToWorld(V(0, 0, 0)), { dur: 0.3, arc: 0.6, onEnd: () => {
+        bag.position.set(0, 0, 0); bag.scale.setScalar(0.8); cu.car.group.add(bag);
+        hop(cu.obj); sfx.happy();
+        setBubble(cu, cu.vip ? '😍' : '❤️');
+        for (let k = 0; k < 3; k++) floatText('❤', cu.obj.position.clone().add(V((k - 1) * 0.3, 1.6, 0)), { color: '#ff6b8a', stroke: '#ffffff', size: 0.5, dur: 1.0, rise: 1, });
+      } });
+      queue.shift();
+      cu.checkingOut = false;
+      cu.state = 'leave'; cu.path = route(cu.pos, EXIT[0]).concat([EXIT[1].clone()]);
+      reg.busy = false; reg.cu = null;
+      setTimeout(() => { if (!reg.busy) drawScreen('いらっしゃい'); }, 900);
+      break;
+    }
+  }
+}
+
+// お金の山
+const money = { amount: 0, stacks: [], timer: 0, group: new THREE.Group() };
+scene.add(money.group);
+function refreshMoneyPile() {
+  const n = Math.min(32, Math.ceil(money.amount / 8));
+  while (money.stacks.length < n) {
+    const i = money.stacks.length;
+    const b = box(0.42, 0.08, 0.24, i % 2 ? M.cash : M.cashDark);
+    const col = i % 4, layer = Math.floor(i / 4);
+    b.position.set(MONEY_SPOT.x - 0.23 + (col % 2) * 0.46, 0.05 + layer * 0.09, MONEY_SPOT.z - 0.15 + Math.floor(col / 2) * 0.3);
+    b.rotation.y = (Math.random() - 0.5) * 0.3;
+    money.group.add(b); money.stacks.push(b);
+    popIn(b, 1, 0.25);
+  }
+  while (money.stacks.length > n) money.group.remove(money.stacks.pop());
+}
+function addMoney(v) { money.amount += v; refreshMoneyPile(); }
+function updateMoney(dt) {
+  money.timer -= dt;
+  if (Math.hypot(player.pos.x - MONEY_SPOT.x, player.pos.z - MONEY_SPOT.z) < 1.1 && money.amount > 0 && money.timer <= 0) {
+    money.timer = 0.05;
+    const take = Math.max(1, Math.ceil(money.amount / 10));
+    money.amount -= take; save.money += take;
+    refreshMoneyPile(); updateHud(true); sfx.coin();
+    flyTo(box(0.3, 0.05, 0.18, M.cash), V(MONEY_SPOT.x, 0.4, MONEY_SPOT.z), () => player.pos.clone().setY(1.3), { dur: 0.2, arc: 0.5 });
+    if (save.tutorial === 4 && money.amount <= 0) setTutorial(5);
+  }
+}
+
+// =====================================================================
+//  道すじ（NPCが棚やかべをよけて歩く）
+// =====================================================================
+const BANDS = [{ z1: -2.25, z2: -0.95 }, { z1: 0.95, z2: 2.25 }];
+const AISLES = [-6, -2, 2, 6];
+const nearestAisle = (x) => AISLES.reduce((a, b) => Math.abs(b - x) < Math.abs(a - x) ? b : a);
+function route(a, b) {
+  const pts = [];
+  const down = b.z < a.z;
+  const obs = [];
+  for (const band of BANDS) { const mid = (band.z1 + band.z2) / 2; if ((a.z - mid) * (b.z - mid) < 0) obs.push({ band, mid }); }
+  if ((a.z + 5) * (b.z + 5) < 0) obs.push({ wall: true, mid: -5 });
+  obs.sort((p, q) => down ? q.mid - p.mid : p.mid - q.mid);
+  let cx = a.x;
+  for (const o of obs) {
+    if (o.wall) {
+      const dx = Math.max(-3, Math.min(3, (cx + b.x) / 2));
+      pts.push(V(dx, 0, down ? -4.4 : -5.6), V(dx, 0, down ? -5.6 : -4.4)); cx = dx;
+    } else {
+      const ax = nearestAisle((cx + b.x) / 2);
+      pts.push(V(ax, 0, down ? o.band.z2 + 0.3 : o.band.z1 - 0.3), V(ax, 0, down ? o.band.z1 - 0.3 : o.band.z2 + 0.3)); cx = ax;
+    }
+  }
+  pts.push(V(b.x, 0, b.z));
+  return pts;
+}
+// NPCを道すじにそって動かす（着いたら true）
+function followPath(npc, dt, speed) {
+  if (!npc.path.length) { npc.moving = false; return true; }
+  const target = npc.path[0];
+  const dx = target.x - npc.pos.x, dz = target.z - npc.pos.z;
+  const d = Math.hypot(dx, dz), step = speed * dt;
+  npc.moving = true;
+  if (d > 0.001) {
+    const want = Math.atan2(dx, dz);
+    let diff = want - npc.obj.rotation.y;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    npc.obj.rotation.y += diff * Math.min(1, dt * 12);
+  }
+  if (d <= step) { npc.pos.x = target.x; npc.pos.z = target.z; npc.path.shift(); if (!npc.path.length) { npc.moving = false; return true; } }
+  else { npc.pos.x += dx / d * step; npc.pos.z += dz / d * step; }
+  return false;
+}
+function faceTo(npc, angle, dt) {
+  let diff = angle - npc.obj.rotation.y;
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  npc.obj.rotation.y += diff * Math.min(1, dt * 10);
+}
+
+// =====================================================================
+//  お客さん
+// =====================================================================
+const customers = [];
+const queue = [];
+const ENTRY = [V(-3, 0, 13), V(-3, 0, 5.5)];
+const EXIT = [V(1.5, 0, 8.5), V(1.5, 0, 14)];
+const COLORS = [0x8fd3ff, 0xffd36e, 0xb79cff, 0xff9fb8, 0x9be89b, 0xffffff, 0xd8b48c, 0x9ec7ff, 0xffa36b];
+const queueSpot = (i) => V(REG.x - 1.4 - i * 1.0, 0, REG.z);
+let spawnTimer = 1.5;
+
+function bubbleTexture(text) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 160;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff';
+  g.beginPath(); g.roundRect(8, 8, 240, 110, 36); g.fill();
+  g.beginPath(); g.moveTo(110, 116); g.lineTo(128, 150); g.lineTo(146, 116); g.fill();
+  g.fillStyle = '#3a2a1a'; g.font = '800 62px -apple-system, "Hiragino Sans", "Apple Color Emoji", sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 66);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function setBubble(cu, text) {
+  if (cu.bubbleText === text) return;
+  cu.bubbleText = text;
+  if (cu.bubble.material.map) cu.bubble.material.map.dispose();
+  cu.bubble.material.map = bubbleTexture(text);
+  cu.bubble.material.needsUpdate = true;
+  const b = cu.bubble;
+  tween(0.25, (p) => b.scale.set(1.1 * easeOutBack(p), 0.7 * easeOutBack(p), 1));
+}
+const unlockedSells = () => SELLS.filter(t => save.unlocked[t]);
+function spawnCustomer() {
+  const types = unlockedSells();
+  const rank = rankOf(save.earned);
+  const vip = rank >= 3 && Math.random() < 0.1;
+  const kinds = Math.min(types.length, 1 + (Math.random() < 0.4 ? 1 : 0) + (rank >= 5 && Math.random() < 0.3 ? 1 : 0));
+  const pool = [...types].sort(() => Math.random() - 0.5).slice(0, kinds);
+  const wants = pool.map(t => ({ type: t, n: (vip ? 2 : 1) + Math.floor(Math.random() * 3) }));
+  const obj = makeCharacter(vip ? 0xffd34d : COLORS[Math.floor(Math.random() * COLORS.length)], { feet: 0x555555, crown: vip });
+  obj.scale.setScalar(0.85);
+  const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false }));
+  bubble.scale.set(1.1, 0.7, 1); bubble.position.y = vip ? 2.2 : 2.0; bubble.renderOrder = 10;
+  obj.add(bubble);
+  const cu = { obj, bubble, car: makeCarrier(obj, 0.55, 0.5, 0.7), pos: ENTRY[0].clone(), path: [ENTRY[1].clone()], state: 'enter', wants, wi: 0, got: 0, bought: [], vip,
+    timer: 0, wait: 0, bubbleText: '', moving: false, arrived: false, checkingOut: false };
+  obj.position.copy(cu.pos);
+  scene.add(obj);
+  customers.push(cu);
+  showWant(cu);
+  if (vip) floatText('👑 VIPが来た！', V(-3, 2.5, 6), { color: '#ffe066' });
+}
+function showWant(cu) {
+  const w = cu.wants[cu.wi];
+  if (w) setBubble(cu, `${cu.vip ? '👑' : ''}${ITEMS[w.type].emoji}×${w.n - cu.got}`);
+}
+function leaveAngry(cu) {
+  const qi = queue.indexOf(cu);
+  if (qi >= 0) queue.splice(qi, 1);
+  setBubble(cu, '💢');
+  sfx.angry();
+  while (cu.car.items.length) carrierRemove(cu.car, cu.car.items[0].type);
+  cu.state = 'leave';
+  cu.path = route(cu.pos, EXIT[0]).concat([EXIT[1].clone()]);
+  floatText('おそい！', cu.obj.position.clone().add(V(0, 2.6, 0)), { color: '#ff6b6b', size: 0.7 });
+}
+function updateCustomer(cu, dt) {
+  cu.timer -= dt;
+  const sp = 2.6;
+  switch (cu.state) {
+    case 'enter':
+      if (followPath(cu, dt, sp)) { cu.state = 'toShelf'; cu.path = null; }
+      break;
+    case 'toShelf': {
+      const s = shelves[cu.wants[cu.wi].type];
+      if (!cu.path) cu.path = route(cu.pos, shelfFront(s).add(V((customers.indexOf(cu) % 3 - 1) * 0.6, 0, 0.1)));
+      if (followPath(cu, dt, sp)) { cu.state = 'pick'; cu.path = null; }
+      break;
+    }
+    case 'pick': {
+      faceTo(cu, Math.PI, dt);
+      const w = cu.wants[cu.wi];
+      const s = shelves[w.type];
+      if (s.items.length === 0) {
+        cu.wait += dt;
+        if (cu.wait > 22 && cu.bubbleText.indexOf('😠') < 0) setBubble(cu, `😠${ITEMS[w.type].emoji}`);
+      }
+      if (cu.timer <= 0 && s.items.length > 0) {
+        const from = takeFromShelf(s);
+        cu.timer = 0.35;
+        cu.got++; cu.bought.push(w.type);
+        cu.car.pending++;
+        flyTo(makeItem(w.type), from, () => carrierTop(cu.obj, cu.car), { dur: 0.2, arc: 0.4, onEnd: () => { cu.car.pending--; carrierAdd(cu.car, w.type); } });
+        if (cu.got >= w.n) {
+          cu.wi++; cu.got = 0;
+          if (cu.wi >= cu.wants.length) { cu.state = 'toQueue'; cu.path = null; queue.push(cu); setBubble(cu, cu.vip ? '👑💳' : '💳'); cu.wait = Math.min(cu.wait, 10); }
+          else { cu.state = 'toShelf'; cu.path = null; showWant(cu); }
+        } else showWant(cu);
+      }
+      break;
+    }
+    case 'toQueue': {
+      const i = queue.indexOf(cu);
+      const spot = queueSpot(i);
+      if (!cu.path || cu.qi !== i) { cu.path = route(cu.pos, spot); cu.qi = i; }
+      const arrived = followPath(cu, dt, sp);
+      cu.arrived = arrived && i === 0;
+      if (arrived) faceTo(cu, Math.PI / 2, dt);
+      if (!cu.checkingOut && arrived) {
+        cu.wait += dt;
+        if (cu.wait > 30 && cu.bubbleText.indexOf('😠') < 0) setBubble(cu, '😠💳');
+        if (cu.wait > 55 && save.tutorial >= 5) leaveAngry(cu);
+      }
+      break;
+    }
+    case 'leave':
+      if (followPath(cu, dt, sp)) cu.state = 'gone';
+      break;
+  }
+  cu.obj.position.copy(cu.pos);
+}
+
+// =====================================================================
+//  スタッフ
+// =====================================================================
+let clerk = null;
+function placeClerk(anim = false) {
+  if (clerk || !save.staff.cashier) return;
+  clerk = makeCharacter(0x9be89b, { cap: 0x4f9de8, apron: 0xffffff });
+  clerk.position.set(CASH_SPOT.x + 0.15, 0, CASH_SPOT.z);
+  clerk.rotation.y = -Math.PI / 2;
+  scene.add(clerk);
+  cashMark.visible = false;
+  if (anim) { popIn(clerk, 1, 0.5); burst(V(CASH_SPOT.x, 1.5, CASH_SPOT.z), 30); }
+}
+const helpers = [];
+const HELPER_COLORS = [0xffe0a3, 0xc9a3ff, 0xa3e4ff];
+function addHelper(i, anim = false) {
+  const obj = makeCharacter(HELPER_COLORS[i], { straw: true, apron: 0x5fbf6a, feet: 0x6b4a2a });
+  const h = { obj, pos: V(-6 + i * 1.2, 0, -3.5), car: null, path: [], state: 'idle', task: null, timer: 0, wait: 0, moving: false, idleSpot: V(-6 + i * 1.2, 0, -3.5) };
+  h.car = makeCarrier(obj);
+  obj.position.copy(h.pos);
+  scene.add(obj);
+  helpers.push(h);
+  if (anim) { popIn(obj, 1, 0.5); burst(h.pos.clone().setY(1.5), 30); }
+}
+const HELPER_CAP = 5;
+function chooseTask(h) {
+  // 持ち物があるなら、まずそれを片付ける
+  if (h.car.items.length) {
+    const t = h.car.items[0].type;
+    if (t === 'tomato' && h.task && h.task.kind === 'feed') return { kind: 'feed' };
+    return { kind: 'restock', type: t, deliverOnly: true };
+  }
+  const taken = new Set(helpers.filter(o => o !== h && o.task).map(o => o.task.kind + o.task.type));
+  let best = null, bestScore = 0.75;
+  for (const t of unlockedSells()) {
+    const s = shelves[t];
+    if (!s) continue;
+    const fill = (s.items.length + s.flying) / shelfCap();
+    if (fill >= bestScore || taken.has('restock' + t)) continue;
+    if (t === 'juice' && (!juicer || juicer.output <= 0)) continue;
+    best = { kind: 'restock', type: t }; bestScore = fill;
+  }
+  if (!best && juicer && juicer.input < 4 && !taken.has('feedundefined') && !taken.has('feed')) best = { kind: 'feed' };
+  return best;
+}
+function updateHelper(h, dt) {
+  const spd = 3.2 * staffSpd();
+  h.timer -= dt;
+  switch (h.state) {
+    case 'idle': {
+      if (h.timer > 0) { followPath(h, dt, spd); break; }
+      h.task = chooseTask(h);
+      if (!h.task) { h.timer = 1; if (!h.path.length && h.pos.distanceTo(h.idleSpot) > 0.5) h.path = route(h.pos, h.idleSpot); break; }
+      if (h.task.deliverOnly) { h.state = 'toShelf'; h.path = route(h.pos, shelfFront(shelves[h.task.type]).add(V(0.7, 0, 0))); break; }
+      let src;
+      if (h.task.kind === 'feed' || h.task.type !== 'juice') { const f = fields[h.task.kind === 'feed' ? 'tomato' : h.task.type]; src = V(f.cx + (helpers.indexOf(h) - 1) * 0.6, 0, f.cz); }
+      else src = juicer.outSpot.clone().add(V(0.2, 0, 0.1));
+      h.state = 'toSource'; h.path = route(h.pos, src); h.wait = 0;
+      break;
+    }
+    case 'toSource':
+      if (followPath(h, dt, spd)) { h.state = 'gather'; h.timer = 0.2; }
+      break;
+    case 'gather': {
+      const full = h.car.items.length + h.car.pending >= HELPER_CAP;
+      h.wait += dt;
+      if (h.timer <= 0 && !full) {
+        if (h.task.kind !== 'feed' && h.task.type === 'juice') {
+          if (juicerTake(h.obj, h.car)) h.timer = 0.3 / staffSpd();
+        } else {
+          const f = fields[h.task.kind === 'feed' ? 'tomato' : h.task.type];
+          harvestOne(f, h.pos, (p) => {
+            h.timer = 0.3 / staffSpd();
+            h.car.pending++;
+            flyTo(makeItem(f.type), p.fruitPos.clone(), () => carrierTop(h.obj, h.car), { dur: 0.22, onEnd: () => { h.car.pending--; carrierAdd(h.car, f.type); } });
+          });
+        }
+      }
+      if ((full || (h.wait > 3.5 && h.car.items.length > 0) || h.wait > 8) && h.car.pending === 0) {
+        if (!h.car.items.length) { h.state = 'idle'; h.task = null; h.timer = 0.5; break; }
+        if (h.task.kind === 'feed') { h.state = 'toJuicer'; h.path = route(h.pos, juicer.inSpot.clone().add(V(-0.2, 0, 0.1))); }
+        else { h.state = 'toShelf'; h.path = route(h.pos, shelfFront(shelves[h.task.type]).add(V(0.7, 0, 0))); }
+      }
+      break;
+    }
+    case 'toShelf':
+      if (followPath(h, dt, spd)) { h.state = 'deposit'; h.timer = 0.15; h.wait = 0; }
+      break;
+    case 'toJuicer':
+      if (followPath(h, dt, spd)) { h.state = 'feeding'; h.timer = 0.15; h.wait = 0; }
+      break;
+    case 'deposit': {
+      faceTo(h, Math.PI, dt);
+      const s = shelves[h.task.type];
+      h.wait += dt;
+      if (h.timer <= 0) { if (depositTo(s, h.obj, h.car)) h.timer = 0.2 / staffSpd(); }
+      if (!h.car.items.some(c => c.type === s.type) || h.wait > 6) { h.state = 'idle'; h.task = null; h.timer = 0.3; }
+      break;
+    }
+    case 'feeding': {
+      faceTo(h, Math.PI, dt);
+      h.wait += dt;
+      if (h.timer <= 0) { if (juicerFeed(h.obj, h.car)) h.timer = 0.2 / staffSpd(); }
+      if (!h.car.items.length || h.wait > 6) { h.state = 'idle'; h.task = null; h.timer = 0.3; }
+      break;
+    }
+  }
+  h.obj.position.copy(h.pos);
+}
+
+// =====================================================================
+//  かいほうパネル
+// =====================================================================
+const pads = [];
+function padTexture(pad) {
+  const c = pad.canvas, g = c.getContext('2d');
+  g.clearRect(0, 0, 256, 256);
+  g.fillStyle = 'rgba(255,255,255,0.92)';
+  g.beginPath(); g.roundRect(8, 8, 240, 240, 40); g.fill();
+  const p = pad.paid / pad.price;
+  g.fillStyle = '#ffd34d';
+  g.beginPath(); g.roundRect(8, 248 - 240 * p, 240, 240 * p, 40); g.fill();
+  g.strokeStyle = '#3a2a1a'; g.lineWidth = 8; g.setLineDash([22, 14]);
+  g.beginPath(); g.roundRect(14, 14, 228, 228, 36); g.stroke(); g.setLineDash([]);
+  g.fillStyle = '#3a2a1a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = '64px "Apple Color Emoji", sans-serif'; g.fillText(pad.icon, 128, 70);
+  g.font = '800 30px -apple-system, "Hiragino Sans", sans-serif'; g.fillText(pad.label, 128, 138);
+  g.font = '900 40px -apple-system, "Hiragino Sans", sans-serif'; g.fillText(`💰${pad.price - pad.paid}`, 128, 196);
+  pad.tex.needsUpdate = true;
+}
+for (const def of UNLOCKS) {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+  const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  mesh.rotation.x = -Math.PI / 2; mesh.position.set(def.pos[0], 0.05, def.pos[1]);
+  scene.add(mesh);
+  pads.push(Object.assign({ canvas, tex, mesh, paid: 0, carry: 0, lastDrawn: -1 }, def));
+}
+function unlockThing(id, anim) {
+  save.unlocked[id] = true;
+  if (id === 'juice') {
+    const j = makeJuicer();
+    const s = makeShelf('juice');
+    if (anim) { popIn(j.group, 1, 0.6); popIn(s.group, 1, 0.6, 0.15); }
+  } else {
+    const f = makeField(id), s = makeShelf(id);
+    if (anim) {
+      // 作物が1つずつポンポン出てくる
+      f.plants.forEach((p, k) => { popIn(p.base, 1, 0.45, 0.1 + k * 0.08); });
+      popIn(s.group, 1, 0.6, 0.2);
+    }
+  }
+  ghosts[id]?.forEach(g => scene.remove(g));
+}
+function updatePads(dt) {
+  for (const pad of pads) {
+    const vis = !save.unlocked[pad.id] && pad.req() && save.tutorial >= 5;
+    pad.mesh.visible = vis;
+    if (!vis) { pad.paid = 0; continue; }
+    pad.mesh.position.y = 0.05;
+    if (pad.lastDrawn !== pad.paid) { padTexture(pad); pad.lastDrawn = pad.paid; }
+    const on = Math.abs(player.pos.x - pad.pos[0]) < 0.85 && Math.abs(player.pos.z - pad.pos[1]) < 0.85;
+    if (on && save.money > 0) {
+      pad.carry += pad.price * dt / 1.3;
+      const pay = Math.min(save.money, pad.price - pad.paid, Math.max(1, Math.floor(pad.carry)));
+      pad.carry -= pay;
+      save.money -= pay; pad.paid += pay;
+      updateHud(); sfx.pay();
+      if (Math.random() < 0.5) flyTo(box(0.3, 0.05, 0.18, M.cash), player.pos.clone().setY(1.3), () => V(pad.pos[0], 0.1, pad.pos[1]), { dur: 0.25, arc: 0.6 });
+      if (pad.paid >= pad.price) {
+        pad.paid = 0; pad.lastDrawn = -1;
+        unlockThing(pad.id, true);
+        sfx.unlock(); camShake = 0.3;
+        burst(V(pad.pos[0], 1, pad.pos[1]), 70, 6);
+        toast(`${pad.icon} ${pad.label}をかいほう！`);
+        writeSave(); refreshBadge();
+      }
+    }
+  }
+}
+// まだのものをうっすら表示
+const ghosts = {};
+function makeGhosts() {
+  for (const id of ['corn', 'carrot', 'strawberry', 'apple', 'juice']) {
+    if (save.unlocked[id]) continue;
+    const list = [];
+    if (id === 'juice') {
+      const [jx, jz] = JUICER_POS;
+      const a = box(2.6, 1.2, 1.4, M.ghost); a.position.set(jx, 0.6, jz - 0.1); list.push(a);
+    } else {
+      const [fx, fz] = FIELD_POS[id];
+      const a = box(3.4, 0.1, 2.4, M.ghost); a.position.set(fx, 0.06, fz); list.push(a);
+    }
+    const [sx, sz] = SHELF_POS[id];
+    const b = box(2.4, 1.5, 0.9, M.ghost); b.position.set(sx, 0.75, sz); list.push(b);
+    list.forEach(m => { m.castShadow = false; m.receiveShadow = false; scene.add(m); });
+    ghosts[id] = list;
+  }
+}
+
+// =====================================================================
+//  ランク・ミッション・メニュー
+// =====================================================================
+let lastRank = rankOf(save.earned);
+function checkRank() {
+  const r = rankOf(save.earned);
+  if (r > lastRank) {
+    lastRank = r;
+    sfx.rankup();
+    burst(player.pos.clone().setY(2), 80, 7);
+    toast(`⭐ お店ランク ★${r} になった！<br><small>お客さんが増えるよ</small>`);
+  }
+  updateHud();
+  refreshBadge();
+}
+const missionIndexes = () => MISSIONS.map((m, i) => i).filter(i => !save.claimed.includes(i)).slice(0, 3);
+const missionReady = (i) => MISSIONS[i][1](save) >= MISSIONS[i][2];
+function refreshBadge() {
+  const ready = missionIndexes().filter(missionReady).length;
+  const badge = document.getElementById('menuBadge');
+  badge.style.display = ready ? 'block' : 'none';
+  badge.textContent = ready;
+  document.getElementById('missionDot').style.display = ready ? 'block' : 'none';
+}
+
+const menuEl = document.getElementById('menu');
+const menuList = document.getElementById('menuList');
+let menuTab = 'up';
+function lvDots(lv, max) { let s = '<span class="lv">'; for (let i = 0; i < max; i++) s += `<i class="${i < lv ? 'on' : ''}"></i>`; return s + '</span>'; }
+function renderMenu() {
+  document.getElementById('menuMoney').textContent = `💰 ${save.money}`;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === menuTab));
+  let html = '';
+  if (menuTab === 'up') {
+    for (const u of UPGRADES) html += upgradeCard(u);
+  } else if (menuTab === 'staff') {
+    for (const s of STAFF) {
+      if (!s.req() && !save.staff[s.id]) continue;
+      const have = save.staff[s.id];
+      html += `<div class="card"><div class="ic">${s.icon}</div><div class="tx"><div class="nm">${s.name}</div><div class="ds">${s.desc}</div></div>
+        ${have ? '<span class="done">✔ はたらき中</span>' : `<button class="buy" data-staff="${s.id}" ${save.money < s.cost ? 'disabled' : ''}>💰${s.cost}</button>`}</div>`;
+    }
+    html += upgradeCard(STAFF_UP);
+  } else if (menuTab === 'mission') {
+    const idx = missionIndexes();
+    if (!idx.length) html += '<div class="stat">🎉 すべてのミッションをクリア！</div>';
+    for (const i of idx) {
+      const [text, fn, goal, reward] = MISSIONS[i];
+      const v = Math.min(goal, fn(save));
+      const ready = v >= goal;
+      html += `<div class="card"><div class="tx"><div class="nm">${text}</div><div class="ds">${goal > 1 ? `${v} / ${goal}` : (ready ? 'できた！' : 'まだ')}　ごほうび 💰${reward}</div><div class="bar"><div style="width:${v / goal * 100}%"></div></div></div>
+        <button class="buy ${ready ? 'claim' : ''}" data-mission="${i}" ${ready ? '' : 'disabled'}>${ready ? 'うけとる' : '…'}</button></div>`;
+    }
+    html += `<div class="ds" style="text-align:center;opacity:.6;font-size:12px">クリアしたミッション ${save.claimed.length} / ${MISSIONS.length}</div>`;
+  } else {
+    const r = rankOf(save.earned);
+    html += `<div class="stat"><span>⭐ お店ランク</span><span>★${r}</span></div>`;
+    html += `<div class="stat"><span>💰 売上の合計</span><span>${save.earned}</span></div>`;
+    html += `<div class="stat"><span>🙂 お客さんの数</span><span>${save.served}人</span></div>`;
+    html += `<div class="stat"><span>👑 VIPのお客さん</span><span>${save.vip}人</span></div>`;
+    for (const t of SELLS) if (save.unlocked[t] || save.sold[t]) html += `<div class="stat"><span>${ITEMS[t].emoji} ${ITEMS[t].name}</span><span>${save.sold[t]}こ売った</span></div>`;
+    html += `<button class="buy" id="resetBtn" style="background:#bbb;box-shadow:0 3px 0 #999;margin-top:10px">データを消して最初から</button>`;
+  }
+  menuList.innerHTML = html;
+}
+function upgradeCard(u) {
+  const lv = save.lv[u.id], max = u.costs.length;
+  const maxed = lv >= max;
+  return `<div class="card"><div class="ic">${u.icon}</div><div class="tx"><div class="nm">${u.name}${lvDots(lv, max)}</div><div class="ds">${maxed ? 'さいだいレベル！' : u.desc(lv)}</div></div>
+    ${maxed ? '<span class="done">MAX</span>' : `<button class="buy" data-up="${u.id}" ${save.money < u.costs[lv] ? 'disabled' : ''}>💰${u.costs[lv]}</button>`}</div>`;
+}
+function openMenu() { renderMenu(); menuEl.classList.remove('hidden'); joy.active = false; joyEl.style.display = 'none'; }
+function closeMenu() { menuEl.classList.add('hidden'); }
+document.getElementById('menuBtn').addEventListener('pointerup', (e) => { e.preventDefault(); initAudio(); openMenu(); });
+document.getElementById('menuClose').addEventListener('pointerup', (e) => { e.preventDefault(); closeMenu(); });
+menuEl.addEventListener('pointerup', (e) => { if (e.target === menuEl) closeMenu(); });
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('pointerup', (e) => { e.preventDefault(); menuTab = t.dataset.tab; renderMenu(); }));
+menuList.addEventListener('click', (e) => onMenuButton(e));
+function onMenuButton(e) {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.dataset.up) {
+    const u = UPGRADES.find(x => x.id === b.dataset.up) || STAFF_UP;
+    const cost = u.costs[save.lv[u.id]];
+    if (save.money < cost) return;
+    save.money -= cost; save.lv[u.id]++;
+    if (u.id === 'price') for (const t in shelves) refreshTag(shelves[t]);
+    sfx.buy(); burst(player.pos.clone().setY(2), 30, 5); hop(player.obj);
+    floatText(`${u.icon} レベルアップ！`, player.pos.clone().setY(2.6), { color: '#ffe066', size: 0.8 });
+  } else if (b.dataset.staff) {
+    const s = STAFF.find(x => x.id === b.dataset.staff);
+    if (save.money < s.cost) return;
+    save.money -= s.cost; save.staff[s.id] = true;
+    if (s.id === 'cashier') placeClerk(true);
+    else addHelper(helpers.length, true);
+    sfx.unlock();
+    toast(`${s.icon} ${s.name}をやとった！`);
+  } else if (b.dataset.mission) {
+    const i = +b.dataset.mission;
+    if (!missionReady(i) || save.claimed.includes(i)) return;
+    save.claimed.push(i);
+    save.money += MISSIONS[i][3];
+    sfx.unlock(); burst(player.pos.clone().setY(2), 50, 6);
+    floatText(`+💰${MISSIONS[i][3]}`, player.pos.clone().setY(2.6), { color: '#ffe066' });
+  } else if (b.id === 'resetBtn') {
+    if (b.dataset.sure) { try { localStorage.removeItem(SAVE_KEY); } catch (err) {} location.reload(); return; }
+    b.dataset.sure = '1'; b.textContent = 'ほんとうに消す？（もう一度押す）'; b.style.background = '#e84a4a';
+    return;
+  }
+  updateHud(true); refreshBadge(); writeSave(); renderMenu();
+}
+
+// =====================================================================
+//  チュートリアル
+// =====================================================================
+const hintEl = document.getElementById('hint');
+const arrow = new THREE.Group();
+{ const c = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.6, 12), mat(0xffd34d, { emissive: 0x664400 })); c.rotation.x = Math.PI; arrow.add(c); }
+scene.add(arrow);
+const TUTORIAL = [
+  { text: '🍅 畑に行ってトマトをとろう！（指でドラッグして移動）', target: () => V(FIELD_POS.tomato[0], 0, FIELD_POS.tomato[1]) },
+  { text: '🧺 トマトを棚にならべよう', target: () => shelfFront(shelves.tomato) },
+  { text: '🛒 お客さんがトマトを取るのを待とう', target: () => null },
+  { text: '💳 青い丸の上に立ってレジをしよう', target: () => CASH_SPOT },
+  { text: '💰 緑の丸でお金を受け取ろう', target: () => MONEY_SPOT },
+  { text: '', target: () => null },
+];
+function setTutorial(n) {
+  save.tutorial = n;
+  writeSave();
+  if (n === 5) {
+    toast('🎉 お店をひらいた！<br><small>右下のメニューで強化やミッションができるよ</small>');
+    burst(player.pos.clone().setY(2), 60, 6);
+    document.getElementById('menuBtn').classList.remove('hidden');
+  }
+}
+function updateTutorial(t) {
+  if (save.tutorial === 0 && player.car.items.length > 0) setTutorial(1);
+  if (save.tutorial === 2 && queue.length > 0) setTutorial(3);
+  const step = TUTORIAL[Math.min(save.tutorial, 5)];
+  let text = step.text;
+  if (save.tutorial >= 5) {
+    text = '';
+    if (player.car.items.length >= capacity()) text = '🧺 カゴがいっぱい！棚にならべよう';
+    else if (queue.length >= 3 && !save.staff.cashier && !playerAtCash()) text = '💳 レジにお客さんが並んでるよ！';
+    else if (money.amount >= 60 && save.served < 30) text = '💰 緑の丸にお金がたまってるよ';
+  }
+  if (hintEl.textContent !== text) hintEl.textContent = text;
+  hintEl.classList.toggle('hidden', !text);
+  const tg = step.target();
+  arrow.visible = !!tg && save.tutorial < 5;
+  if (tg) { arrow.position.set(tg.x, 2.2 + Math.sin(t * 4) * 0.25, tg.z); arrow.rotation.y += 0.05; }
+}
+
+// =====================================================================
+//  表示（HUD）
+// =====================================================================
+const moneyEl = document.getElementById('money');
+const carryEl = document.getElementById('carry');
+const rankEl = document.getElementById('rank');
+const rankFill = document.getElementById('rankFill');
+function updateHud(bump) {
+  moneyEl.textContent = `💰 ${save.money}`;
+  carryEl.textContent = `🧺 ${player.car.items.length} / ${capacity()}`;
+  const r = rankOf(save.earned);
+  rankEl.firstChild.textContent = `★${r} `;
+  const lo = RANKS[r - 1], hi = RANKS[r];
+  rankFill.style.width = hi ? `${(save.earned - lo) / (hi - lo) * 100}%` : '100%';
+  if (bump) { moneyEl.classList.remove('bump'); void moneyEl.offsetWidth; moneyEl.classList.add('bump'); }
+  if (!menuEl.classList.contains('hidden')) document.getElementById('menuMoney').textContent = `💰 ${save.money}`;
+}
+const toastEl = document.getElementById('toast');
+let toastTimer = null;
+function toast(html) {
+  toastEl.innerHTML = html;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+}
+
+// =====================================================================
+//  操作（バーチャルスティック）
+// =====================================================================
+const joyEl = document.getElementById('joy'), knobEl = document.getElementById('knob');
+const joy = { active: false, id: null, sx: 0, sy: 0, dx: 0, dy: 0 };
+const keys = {};
+// 画面のどこを触ってもスティックが出る（ボタンやメニューはのぞく）
+window.addEventListener('pointerdown', (e) => {
+  if (e.target.closest && e.target.closest('button, a, #menu, #items, #gate')) return;
+  initAudio();
+  if (joy.active) return;
+  joy.active = true; joy.id = e.pointerId; joy.sx = e.clientX; joy.sy = e.clientY; joy.dx = joy.dy = 0;
+  joyEl.style.left = e.clientX + 'px'; joyEl.style.top = e.clientY + 'px'; joyEl.style.display = 'block';
+  knobEl.style.transform = 'translate(0,0)';
+});
+window.addEventListener('pointermove', (e) => {
+  if (!joy.active || e.pointerId !== joy.id) return;
+  let dx = e.clientX - joy.sx, dy = e.clientY - joy.sy;
+  const d = Math.hypot(dx, dy), max = 50;
+  if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+  joy.dx = dx / max; joy.dy = dy / max;
+  knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
+});
+const endJoy = (e) => { if (e.pointerId !== joy.id) return; joy.active = false; joy.dx = joy.dy = 0; joyEl.style.display = 'none'; };
+window.addEventListener('pointerup', endJoy);
+window.addEventListener('pointercancel', endJoy);
+window.addEventListener('keydown', (e) => { keys[e.code] = true; initAudio(); });
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+document.addEventListener('touchstart', (e) => { if (!e.target.closest('button, a, #menu')) e.preventDefault(); }, { passive: false });
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+// =====================================================================
+//  スタート時の準備
+// =====================================================================
+for (const t of CROPS) if (save.unlocked[t]) { makeField(t); makeShelf(t); }
+if (save.unlocked.juice) { makeJuicer(); makeShelf('juice'); }
+for (const t in shelves) for (let i = 0; i < Math.min(save.shelves[t] || 0, shelfCap()); i++) addToShelf(shelves[t], t, false);
+makeGhosts();
+placeClerk();
+['helper1', 'helper2', 'helper3'].forEach((id, i) => { if (save.staff[id]) addHelper(i); });
+if (save.tutorial >= 5) document.getElementById('menuBtn').classList.remove('hidden');
+updateHud(); refreshBadge();
+
+const BOUNDS = { x1: -9.5, x2: 9.5, z1: -15, z2: 10 };
+function blockers() {
+  const b = Object.values(shelves).map(s => ({ x1: s.cx - 1.25, x2: s.cx + 1.25, z1: s.cz - 0.5, z2: s.cz + 0.5 }));
+  b.push({ x1: REG.x - 0.85, x2: REG.x + 0.85, z1: REG.z - 0.5, z2: REG.z + 0.5 });
+  if (juicer) b.push({ x1: juicer.cx - 1.3, x2: juicer.cx + 1.3, z1: juicer.cz - 0.8, z2: juicer.cz + 0.45 });
+  b.push(...WALLS);
+  return b;
+}
+
+// =====================================================================
+//  メインループ
+// =====================================================================
+const clock = new THREE.Clock();
+let elapsed = 0, saveTimer = 0;
+const camTarget = new THREE.Vector3();
+let lastMoving = false;
+function frame() {
+  const dt = Math.min(clock.getDelta(), 1 / 20) * TIME_SCALE;
+  elapsed += dt;
+
+  // プレイヤー
+  let mx = joy.dx, mz = joy.dy;
+  if (keys.ArrowLeft || keys.KeyA) mx = -1;
+  if (keys.ArrowRight || keys.KeyD) mx = 1;
+  if (keys.ArrowUp || keys.KeyW) mz = -1;
+  if (keys.ArrowDown || keys.KeyS) mz = 1;
+  const mag = Math.min(1, Math.hypot(mx, mz));
+  player.moving = mag > 0.15;
+  if (player.moving) {
+    const n = Math.hypot(mx, mz);
+    const nx = player.pos.x + mx / n * mag * walkSpeed() * dt;
+    const nz = player.pos.z + mz / n * mag * walkSpeed() * dt;
+    const bl = blockers();
+    const hit = (x, z) => bl.some(b => x > b.x1 - 0.35 && x < b.x2 + 0.35 && z > b.z1 - 0.35 && z < b.z2 + 0.35);
+    if (!hit(nx, player.pos.z)) player.pos.x = nx;
+    if (!hit(player.pos.x, nz)) player.pos.z = nz;
+    player.pos.x = Math.max(BOUNDS.x1, Math.min(BOUNDS.x2, player.pos.x));
+    player.pos.z = Math.max(BOUNDS.z1, Math.min(BOUNDS.z2, player.pos.z));
+    let diff = Math.atan2(mx, mz) - player.dir;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    player.dir += diff * Math.min(1, dt * 14);
+  } else if (lastMoving) {
+    // 止まったときに持ち物がゆれる
+    const g = player.car.group;
+    tween(0.4, (p) => { g.rotation.x = Math.sin(p * Math.PI * 2) * 0.12 * (1 - p); }, () => { g.rotation.x = 0; });
+  }
+  lastMoving = player.moving;
+  player.obj.position.copy(player.pos);
+  player.obj.rotation.y = player.dir;
+  animateChar(player.obj, player.moving, elapsed, dt);
+  if (player.moving) player.car.group.rotation.x = -0.08 - player.car.items.length * 0.004;
+  player.car.items.forEach((c, i) => { c.mesh.position.x = Math.sin(elapsed * 8 + i * 0.5) * (player.moving ? 0.015 * i : 0); });
+
+  for (const t in fields) updateField(fields[t], dt);
+  for (const t in shelves) updateShelf(shelves[t], dt);
+  if (juicer) updateJuicer(dt);
+  updateMoney(dt);
+  updateRegister(dt);
+  updatePads(dt);
+
+  // お客さん
+  const rank = rankOf(save.earned);
+  const maxCustomers = 2 + unlockedSells().length + save.lv.ads + Math.floor(rank / 2);
+  spawnTimer -= dt;
+  if (spawnTimer <= 0 && customers.length < maxCustomers && save.tutorial >= 1) {
+    spawnCustomer();
+    spawnTimer = (2.5 + Math.random() * 3) * ADS_INTERVAL[save.lv.ads];
+  }
+  for (const cu of customers) { updateCustomer(cu, dt); animateChar(cu.obj, cu.moving, elapsed + cu.obj.id, dt); }
+  for (let i = customers.length - 1; i >= 0; i--) if (customers[i].state === 'gone') { scene.remove(customers[i].obj); customers.splice(i, 1); }
+  for (const h of helpers) { updateHelper(h, dt); animateChar(h.obj, h.moving, elapsed + h.obj.id, dt); }
+  if (clerk) animateChar(clerk, false, elapsed, dt);
+  cashMark.material.opacity = playerAtCash() ? 1 : 0.5 + Math.sin(elapsed * 4) * 0.3;
+  for (const l of decoTrees) l.rotation.z = Math.sin(elapsed * 0.8 + l.id) * 0.03;
+
+  // アニメーション
+  for (let i = 0; i < tweens.length; i++) {
+    const tw = tweens[i];
+    tw.t += dt;
+    if (tw.t < 0) continue;
+    const p = Math.min(1, tw.t / tw.dur);
+    tw.fn(p);
+    if (p >= 1) { tweens.splice(i--, 1); if (tw.done) tw.done(); }
+  }
+  updateConfetti(dt);
+  updateTutorial(elapsed);
+
+  // カメラ
+  camTarget.lerp(player.pos, Math.min(1, dt * 6));
+  camera.position.copy(camTarget).addScaledVector(CAM_OFFSET, camera.aspect < 0.7 ? 1.25 : 1);
+  if (camShake > 0) { camShake -= dt; camera.position.x += (Math.random() - 0.5) * camShake; camera.position.y += (Math.random() - 0.5) * camShake; }
+  camera.lookAt(camTarget.x, 0.5, camTarget.z);
+  sun.position.set(camTarget.x + 8, 16, camTarget.z + 6);
+  sun.target.position.copy(camTarget);
+
+  saveTimer += dt;
+  if (saveTimer > 3) { saveTimer = 0; writeSave(); }
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+document.getElementById('loading').remove();
+camTarget.copy(player.pos);
+requestAnimationFrame(frame);
+window.addEventListener('pagehide', writeSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) writeSave(); });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('../sw.js').catch(() => {});
+}
+if (TEST) window.__mart = { save, player, customers, queue, shelves, money, keys, pads, helpers, reg, get juicer() { return juicer; }, openMenu, renderMenu, unlockThing };
+</script>
+</body>
+</html>

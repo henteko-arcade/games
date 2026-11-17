@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<script src="../lib/gate.js" data-game="brawl" data-title="ふっとばしバトル" data-hash="f14c38082335f73c08680988f64a8c598292a9522d9c2a5af41350a0cbfc56b0"></script>
+<title>ふっとばしバトル</title>
+<meta name="theme-color" content="#151833">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ゲームズ">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #151833; color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none; overscroll-behavior: none;
+  }
+  #game { position: fixed; left: 0; top: 0; width: 100%; display: block; }
+
+  /* ===== 操作ボタン ===== */
+  #controls {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    height: calc(190px + env(safe-area-inset-bottom, 0px));
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(#1b1f3b, #10132a);
+    border-top: 1px solid rgba(255,255,255,.08);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pad { display: flex; gap: 12px; align-items: center; }
+  #stick { position: relative; width: 140px; height: 140px; border-radius: 50%; flex-shrink: 0;
+           background: radial-gradient(circle, rgba(255,255,255,.04) 40%, rgba(255,255,255,.12));
+           border: 2px solid rgba(255,255,255,.2); }
+  #stick .ar { position: absolute; font-size: 12px; opacity: .45; }
+  #stickKnob { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%;
+               background: radial-gradient(circle at 35% 30%, #ffffff, #c9d0ff); box-shadow: 0 4px 10px rgba(0,0,0,.35); }
+  .btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: rgba(255,255,255,.1);
+    border: 2px solid rgba(255,255,255,.18);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800; color: #fff;
+    transition: transform .05s, background .05s;
+  }
+  .btn small { font-size: 10.5px; font-weight: 700; opacity: .85; margin-top: 1px; }
+  .btn.on { transform: scale(.93); background: rgba(255,255,255,.28); }
+  .actions { position: relative; width: 176px; height: 156px; }
+  .actions .btn { position: absolute; }
+  #btnJump { top: 0; left: 46px; width: 64px; height: 64px; font-size: 21px;
+             background: rgba(80,200,255,.18); border-color: rgba(80,200,255,.45); }
+  #btnSp   { bottom: 0; left: 0; width: 66px; height: 66px; font-size: 21px;
+             background: rgba(180,120,255,.2); border-color: rgba(180,120,255,.5); }
+  #btnAtk  { bottom: 0; right: 0; width: 92px; height: 92px;
+             background: rgba(255,110,90,.2); border-color: rgba(255,110,90,.5); }
+  #btnJump.on { background: rgba(80,200,255,.42); }
+  #btnSp.on   { background: rgba(180,120,255,.45); }
+  #btnAtk.on  { background: rgba(255,110,90,.45); }
+
+  /* ===== 上のボタン ===== */
+  .corner {
+    position: fixed; z-index: 10;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(0,0,0,.28); color: #fff; border: none;
+    font-size: 21px; line-height: 42px; text-align: center; text-decoration: none;
+  }
+  #backBtn { left: calc(env(safe-area-inset-left, 0px) + 12px); }
+  #muteBtn { right: calc(env(safe-area-inset-right, 0px) + 12px); }
+
+  /* ===== タイトル・結果・ワザ一覧 ===== */
+  .overlay {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(12,14,34,.86);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center;
+  }
+  .overlay.hidden { display: none; }
+  .title { font-size: 38px; font-weight: 900; letter-spacing: .03em; }
+  .how { font-size: 14px; line-height: 1.9; opacity: .9; }
+  .how b { color: #ffe066; }
+  .choices { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 280px; margin-top: 6px; }
+  .choice {
+    padding: 14px; border-radius: 14px; border: none;
+    font-size: 18px; font-weight: 800; color: #fff;
+    background: rgba(255,255,255,.12);
+  }
+  .choice.easy   { background: #3fae6b; }
+  .choice.normal { background: #e2a03a; }
+  .choice.hard   { background: #d9534f; }
+  .choice.sub    { background: rgba(255,255,255,.14); font-size: 15px; padding: 11px; }
+  .choice:active { transform: scale(.97); }
+  .result { font-size: 56px; font-weight: 900; }
+  .result.win  { color: #ffe066; }
+  .result.lose { color: #9aa4ff; }
+  .wins { font-size: 14px; opacity: .8; }
+
+  #movesScreen { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top, 0px) + 28px); overflow-y: auto; touch-action: pan-y; }
+  .moves { width: 100%; max-width: 360px; text-align: left; }
+  .moves h2 { font-size: 15px; margin: 14px 0 6px; padding: 4px 10px; border-radius: 8px; display: inline-block; }
+  .moves h2.atk { background: rgba(255,110,90,.35); }
+  .moves h2.sp  { background: rgba(180,120,255,.4); }
+  .moves h2.mv  { background: rgba(80,200,255,.35); }
+  .move { display: flex; gap: 10px; padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .move .name { font-weight: 800; min-width: 118px; font-size: 14px; }
+  .move .cmd { font-size: 12.5px; opacity: .85; line-height: 1.5; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<a id="backBtn" class="corner" href="../" aria-label="ゲーム一覧にもどる">←</a>
+<button id="muteBtn" class="corner" aria-label="音のオン・オフ">🔊</button>
+
+<div id="controls">
+  <div id="stick">
+    <span class="ar" style="left:50%;top:6px;transform:translateX(-50%)">▲</span>
+    <span class="ar" style="left:50%;bottom:6px;transform:translateX(-50%)">▼</span>
+    <span class="ar" style="left:8px;top:50%;transform:translateY(-50%)">◀</span>
+    <span class="ar" style="right:8px;top:50%;transform:translateY(-50%)">▶</span>
+    <div id="stickKnob"></div>
+  </div>
+  <div class="actions">
+    <div class="btn" id="btnJump">⤒<small>ジャンプ</small></div>
+    <div class="btn" id="btnSp">✦<small>とくぎ</small></div>
+    <div class="btn" id="btnAtk">✊<small>こうげき</small></div>
+  </div>
+</div>
+
+<div id="titleScreen" class="overlay">
+  <div class="title">ふっとばしバトル</div>
+  <div class="how">
+    相手にダメージをためて<br>
+    <b>ステージの外へふっとばそう！</b><br>
+    こうげき・とくぎは<b>スティックの向き</b>や<b>空中</b>で<br>出るワザが変わるよ。<b>崖</b>にもつかまれる！
+  </div>
+  <div class="choices">
+    <button class="choice easy"   data-level="easy">よわい CPU</button>
+    <button class="choice normal" data-level="normal">ふつう CPU</button>
+    <button class="choice hard"   data-level="hard">つよい CPU</button>
+    <button class="choice sub" id="movesBtn">📖 ワザ一覧</button>
+  </div>
+</div>
+
+<div id="movesScreen" class="overlay hidden">
+  <div class="title" style="font-size:28px">ワザ一覧</div>
+  <div class="moves">
+    <h2 class="atk">✊ こうげきボタン</h2>
+    <div class="move"><div class="name">パンチ</div><div class="cmd">地上でちょんと押す。すばやい</div></div>
+    <div class="move"><div class="name">ダッシュアタック</div><div class="cmd">スティックで走りながら押す。前にすべりこむ</div></div>
+    <div class="move"><div class="name">スマッシュ</div><div class="cmd">地上で長押し→離す。ためるほど強い！</div></div>
+    <div class="move"><div class="name">くるりんキック</div><div class="cmd">空中でちょんと押す。前も後ろも当たる</div></div>
+    <div class="move"><div class="name">メテオおとし</div><div class="cmd">空中で長押し→離す。相手を真下にたたき落とす</div></div>
+    <h2 class="sp">✦ とくぎボタン</h2>
+    <div class="move"><div class="name">エナジーボール</div><div class="cmd">地上で押す。弾がまっすぐ飛ぶ</div></div>
+    <div class="move"><div class="name">ロケットとっしん</div><div class="cmd">スティックを左右に倒して押す。横に飛んでいく（空中では1回だけ）</div></div>
+    <div class="move"><div class="name">ライジングアッパー</div><div class="cmd">空中で押す／スティック上＋押す。上に大きく飛ぶ！復帰に（着地まで1回）</div></div>
+    <h2 class="mv">🕹️ うごき</h2>
+    <div class="move"><div class="name">歩く・走る</div><div class="cmd">スティックを少し倒すと歩く、大きく倒すと走る</div></div>
+    <div class="move"><div class="name">すり抜け・急降下</div><div class="cmd">スティック下：浮いている床から降りる／空中で速く落ちる</div></div>
+    <div class="move"><div class="name">崖つかまり</div><div class="cmd">ステージの端に近づくと自動でつかまる。ステージ側に倒す→登る、ジャンプ→崖ジャンプ、こうげき→登りながらパンチ、反対側に倒す→はなす</div></div>
+  </div>
+  <div class="choices" style="margin-top:18px">
+    <button class="choice sub" id="movesClose">もどる</button>
+  </div>
+</div>
+
+<div id="resultScreen" class="overlay hidden">
+  <div class="result" id="resultText">かち！</div>
+  <div class="wins" id="winsText"></div>
+  <div class="choices">
+    <button class="choice normal" id="againBtn">もう一回</button>
+    <button class="choice sub" id="levelBtn">むずかしさを変える</button>
+  </div>
+</div>
+
+<script>
+window.gateReady.then(() => {   // パスワードが通るまで待つ
+  'use strict';
+
+  // ===== 設定 =====
+  const W = 400;                 // ステージの論理的な横幅
+  const GRAVITY = 1400;
+  const MAX_FALL = 760;
+  const STOCKS = 3;
+  const WINS_KEY = 'brawl-wins';
+  const MUTE_KEY = 'brawl-muted';
+  const CHARGE_MIN = 0.2;        // これ以上長押しすると「ため」ワザになる
+  const TEST_MODE = new URLSearchParams(location.search).has('test');  // ?test を付けるとCPUが動かない（動作確認用）
+
+  const LEVELS = {
+    easy:   { speed: 0.72, react: 0.42, atkRate: 1.1, smashUse: 0.15, recover: 0.55, special: 0.1 },
+    normal: { speed: 0.88, react: 0.24, atkRate: 2.2, smashUse: 0.35, recover: 0.85, special: 0.25 },
+    hard:   { speed: 1.0,  react: 0.11, atkRate: 3.6, smashUse: 0.6,  recover: 1.0,  special: 0.4 },
+  };
+
+  // ワザのデータ
+  //  startup: 出るまで / active: 当たる時間 / end: 終わるまで（秒）
+  //  dmg: ダメージ / base,growth: ふっとばし力 / angle: ふっとぶ角度（マイナスは下向き）
+  const MOVES = {
+    jab:      { name: 'パンチ',            startup: 0.05, active: 0.09, end: 0.26, reach: 30, dmg: 5,  base: 170, growth: 6.0, angle: 35 },
+    dash:     { name: 'ダッシュアタック',  startup: 0.05, active: 0.18, end: 0.42, reach: 34, dmg: 7,  base: 190, growth: 6.2, angle: 28 },
+    smash:    { name: 'スマッシュ',        startup: 0.13, active: 0.10, end: 0.46, reach: 40, dmg: 12, base: 230, growth: 8.6, angle: 40 },
+    air:      { name: 'くるりんキック',    startup: 0.05, active: 0.16, end: 0.32, reach: 22, dmg: 6,  base: 165, growth: 5.8, angle: 45 },
+    meteor:   { name: 'メテオおとし',      startup: 0.15, active: 0.10, end: 0.44, reach: 34, dmg: 10, base: 210, growth: 7.2, angle: -70 },
+    ball:     { name: 'エナジーボール',    startup: 0.10, active: 0.00, end: 0.34, reach: 0,  dmg: 4,  base: 120, growth: 2.6, angle: 30 },
+    rocket:   { name: 'ロケットとっしん',  startup: 0.06, active: 0.26, end: 0.46, reach: 30, dmg: 9,  base: 210, growth: 6.5, angle: 30 },
+    upper:    { name: 'ライジングアッパー', startup: 0.03, active: 0.22, end: 0.42, reach: 26, dmg: 8,  base: 220, growth: 5.6, angle: 80 },
+  };
+
+  // ===== キャンバス =====
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const controlsEl = document.getElementById('controls');
+  let scale = 1, VH = 400, dpr = 1, G = 280;
+  let platforms = [];
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const cw = window.innerWidth;
+    const ch = Math.max(200, controlsEl.getBoundingClientRect().top);
+    canvas.style.height = ch + 'px';
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+    scale = cw / W;
+    VH = ch / scale;
+    G = VH * 0.7;
+    platforms = [
+      { x1: 60,  x2: 340, y: G,      main: true },
+      { x1: 92,  x2: 170, y: G - 92 },
+      { x1: 230, x2: 308, y: G - 92 },
+    ];
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ===== サウンド =====
+  let audio = null;
+  let muted = false;
+  try { muted = localStorage.getItem(MUTE_KEY) === '1'; } catch (e) {}
+  const muteBtn = document.getElementById('muteBtn');
+  const showMute = () => { muteBtn.textContent = muted ? '🔇' : '🔊'; };
+  showMute();
+  muteBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    muted = !muted;
+    try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (err) {}
+    showMute();
+  });
+  document.getElementById('backBtn').addEventListener('pointerdown', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    location.href = '../';
+  });
+
+  function initAudio() {
+    if (!audio) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audio = new AC();
+    }
+    if (audio && audio.state === 'suspended') audio.resume();
+  }
+  function beep(freq, dur, type = 'sine', vol = 0.15, slideTo = null) {
+    if (!audio || muted) return;
+    const t = audio.currentTime;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(audio.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const sfx = {
+    jump()   { beep(420, 0.1, 'triangle', 0.1, 700); },
+    swing()  { beep(200, 0.07, 'square', 0.04, 120); },
+    ball()   { beep(700, 0.15, 'sine', 0.12, 1200); },
+    rocket() { beep(150, 0.3, 'sawtooth', 0.08, 500); },
+    upper()  { beep(300, 0.25, 'triangle', 0.12, 1100); },
+    hit(p)   { beep(180 + p * 2, 0.1, 'square', 0.13, 90); },
+    smash()  { beep(120, 0.25, 'sawtooth', 0.18, 50); beep(900, 0.08, 'square', 0.06); },
+    meteor() { beep(600, 0.3, 'sawtooth', 0.15, 60); },
+    ko()     { beep(900, 0.5, 'sawtooth', 0.12, 60); },
+    grab()   { beep(500, 0.06, 'square', 0.06, 350); },
+    win()    { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 0.18, 'triangle', 0.15), i * 110)); },
+    lose()   { [392, 330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.25, 'triangle', 0.13), i * 160)); },
+  };
+
+  // ===== 入力 =====
+  const keys = { left: false, right: false, up: false, down: false, jump: false, attack: false, special: false };
+  // すばやいタップも見逃さないように「押された」ことを覚えておく
+  const tapped = { jump: false, attack: false, special: false };
+  function bindButton(id, name) {
+    const el = document.getElementById(id);
+    const down = (e) => {
+      e.preventDefault();
+      initAudio();
+      keys[name] = true; if (name in tapped) tapped[name] = true; el.classList.add('on');
+      try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    };
+    const up = (e) => { e.preventDefault(); keys[name] = false; el.classList.remove('on'); };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('pointerup', up);
+    el.addEventListener('pointercancel', up);
+    el.addEventListener('lostpointercapture', up);
+  }
+  // ===== スティック =====
+  const stickEl = document.getElementById('stick'), stickKnob = document.getElementById('stickKnob');
+  const stick = { id: null, x: 0, y: 0 };
+  function stickMove(e) {
+    const r = stickEl.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const max = r.width / 2 - 14, d = Math.hypot(dx, dy);
+    if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+    stick.x = dx / max; stick.y = dy / max;
+    stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+  stickEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); initAudio();
+    stick.id = e.pointerId;
+    try { stickEl.setPointerCapture(e.pointerId); } catch (err) {}
+    stickMove(e);
+  });
+  stickEl.addEventListener('pointermove', (e) => { if (e.pointerId === stick.id) stickMove(e); });
+  const stickEnd = (e) => { if (e.pointerId !== stick.id) return; stick.id = null; stick.x = stick.y = 0; stickKnob.style.transform = 'translate(0,0)'; };
+  stickEl.addEventListener('pointerup', stickEnd);
+  stickEl.addEventListener('pointercancel', stickEnd);
+  stickEl.addEventListener('lostpointercapture', stickEnd);
+  // スティックとキーボードをまとめる（-1〜1）
+  function axisX() { let x = stick.x; if (keys.left) x = -1; if (keys.right) x = 1; return Math.abs(x) < 0.25 ? 0 : x; }
+  function axisY() { let y = stick.y; if (keys.up) y = -1; if (keys.down) y = 1; return Math.abs(y) < 0.55 ? 0 : y; }
+  bindButton('btnJump', 'jump');
+  bindButton('btnAtk', 'attack');
+  bindButton('btnSp', 'special');
+
+  const KEYMAP = {
+    ArrowLeft: 'left', KeyA: 'left',
+    ArrowRight: 'right', KeyD: 'right',
+    ArrowUp: 'up', ArrowDown: 'down', KeyS: 'down', KeyW: 'jump', Space: 'jump',
+    KeyJ: 'attack', KeyZ: 'attack',
+    KeyK: 'special', KeyX: 'special',
+  };
+  window.addEventListener('keydown', (e) => {
+    const k = KEYMAP[e.code];
+    if (k) { if (!e.repeat && k in tapped) tapped[k] = true; keys[k] = true; e.preventDefault(); initAudio(); }
+  });
+  window.addEventListener('keyup', (e) => {
+    const k = KEYMAP[e.code];
+    if (k) { keys[k] = false; e.preventDefault(); }
+  });
+  // iOSのダブルタップ拡大・スクロール対策
+  document.addEventListener('touchstart', (e) => {
+    if (!e.target.closest('button, a, #movesScreen')) e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+  // ===== キャラクター =====
+  function makeFighter(name, color, x, facing, isCPU) {
+    return {
+      name, color, isCPU,
+      x, y: G, vx: 0, vy: 0, w: 34, h: 40,
+      facing, onGround: true, jumps: 0,
+      usedUp: false, usedSide: false,
+      dmg: 0, stocks: STOCKS,
+      hitstun: 0, inv: 0,
+      attack: null, charging: null,
+      dead: false, respawn: 0,
+      input: { left: false, right: false, up: false, down: false, jump: false, attack: false, special: false },
+      hang: null, ledgeCd: 0, airT: 0, dropT: 0, plat: null,
+      prev: { jump: false, attack: false, special: false },
+      squash: 0,
+    };
+  }
+
+  let state = 'title';   // title | play | end
+  let level = 'normal';
+  let player, cpu, fighters, particles, popups, balls, shake, freeze, endTimer, winner;
+  let ai;
+
+  function newMatch() {
+    resize();
+    player = makeFighter('あなた', '#4fb8ff', 130, 1, false);
+    cpu = makeFighter('CPU', '#ff6b5a', 270, -1, true);
+    fighters = [player, cpu];
+    particles = []; popups = []; balls = [];
+    shake = 0; freeze = 0; endTimer = 0; winner = null;
+    ai = { think: 0, holdAtk: 0, spCd: 0 };
+  }
+
+  // ===== CPUの考え =====
+  function cpuThink(dt) {
+    const L = LEVELS[level];
+    const me = cpu, foe = player, inp = me.input;
+    const main = platforms[0];
+    if (TEST_MODE && !new URLSearchParams(location.search).has('cpu')) { for (const k in inp) inp[k] = false; return; }
+
+    ai.think -= dt;
+    ai.spCd -= dt;
+    inp.special = false;
+    if (ai.holdAtk > 0) {
+      ai.holdAtk -= dt;
+      inp.attack = ai.holdAtk > 0;
+    } else {
+      inp.attack = false;
+    }
+
+    // 落ちそうなときは最優先でステージにもどる
+    // 崖につかまっていたら、少し待ってから登る・ジャンプ・こうげき
+    if (me.hang) {
+      inp.left = inp.right = inp.up = inp.down = false; inp.jump = false;
+      if (!ai.hangPlan) {
+        const r = Math.random();
+        ai.hangPlan = { t: (0.2 + Math.random() * 0.7) * (level === 'easy' ? 1.6 : 1), act: r < 0.5 ? 'climb' : r < 0.8 ? 'jump' : 'attack' };
+      }
+      ai.hangPlan.t -= dt;
+      if (ai.hangPlan.t <= 0) {
+        if (ai.hangPlan.act === 'climb') { inp.right = me.hang.side < 0; inp.left = me.hang.side > 0; }
+        else if (ai.hangPlan.act === 'jump') inp.jump = true;
+        else ai.holdAtk = 0.05;
+      }
+      return;
+    }
+    ai.hangPlan = null;
+    const offStage = me.x < main.x1 - 4 || me.x > main.x2 + 4;
+    if (!me.dead && offStage && me.hitstun <= 0 && !me.attack) {
+      const dir = me.x < W / 2 ? 1 : -1;
+      const distX = dir > 0 ? main.x1 - me.x : me.x - main.x2;
+      inp.left = dir < 0; inp.right = dir > 0;
+      inp.jump = false;
+      if (me.vy > 60 && me.jumps < 2 && me.y > G - 50 && Math.random() < L.recover) {
+        inp.jump = true;
+      } else if (me.jumps >= 2 && me.y > G - 20 && ai.spCd <= 0 && Math.random() < L.recover) {
+        ai.spCd = 0.3;
+        if (distX > 110 && !me.usedSide) {
+          inp.special = true;                      // ロケットとっしんで横にもどる
+        } else if (!me.usedUp) {
+          inp.left = inp.right = false;            // ライジングアッパーで上にもどる
+          inp.special = true;
+        }
+      }
+      return;
+    }
+
+    if (ai.think > 0) { inp.jump = false; return; }
+    ai.think = L.react * (0.6 + Math.random() * 0.8);
+
+    const dx = foe.x - me.x;
+    const dy = foe.y - me.y;
+    const near = Math.abs(dx) < 46 && Math.abs(dy) < 40;
+    const foeOff = foe.x < main.x1 || foe.x > main.x2;
+
+    inp.left = inp.right = false;
+    inp.jump = false;
+
+    if (foe.dead) {
+      if (Math.abs(me.x - W / 2) > 20) { inp.left = me.x > W / 2; inp.right = me.x < W / 2; }
+      return;
+    }
+
+    if (near) {
+      me.facing = dx > 0 ? 1 : -1;
+      if (Math.random() < L.atkRate * ai.think * 2.2) {
+        if (!me.onGround) {
+          // 空中：キックかメテオ
+          const meteor = foeOff && dy > 0 && Math.random() < L.smashUse;
+          ai.holdAtk = meteor ? 0.4 : 0.05;
+        } else {
+          const smash = foe.dmg > 60 && Math.random() < L.smashUse;
+          ai.holdAtk = smash ? 0.35 + Math.random() * 0.45 : 0.05;
+        }
+        inp.attack = true;
+      }
+      return;
+    }
+
+    // 少し離れているときはとくぎを使うことも
+    if (me.onGround && Math.abs(dy) < 30 && Math.abs(dx) < 220 && ai.spCd <= 0 && Math.random() < L.special * ai.think * 4) {
+      ai.spCd = 1.2;
+      me.facing = dx > 0 ? 1 : -1;
+      const useRocket = Math.abs(dx) < 140 && Math.random() < 0.4;
+      if (useRocket) { inp.left = dx < 0; inp.right = dx > 0; }
+      inp.special = true;
+      return;
+    }
+
+    // 相手に近づく（ただし自分から落ちないように）
+    let dir = dx > 0 ? 1 : -1;
+    const nextX = me.x + dir * 30;
+    if (foeOff && (nextX < main.x1 + 10 || nextX > main.x2 - 10)) dir = 0;
+    inp.left = dir < 0; inp.right = dir > 0;
+
+    if (dy < -50 && Math.abs(dx) < 90 && Math.random() < 0.6) inp.jump = true;
+    if (Math.random() < 0.04) inp.jump = true;
+  }
+
+  // ===== ワザを出す =====
+  function startMove(f, type, charge = 0) {
+    f.attack = { type, t: 0, hit: false, charge, fired: false };
+    switch (type) {
+      case 'dash':
+        f.vx = f.facing * 330;
+        sfx.swing(); break;
+      case 'rocket':
+        f.vx = f.facing * 560; f.vy = -60;
+        if (!f.onGround) f.usedSide = true;
+        sfx.rocket(); break;
+      case 'upper':
+        f.vy = -660; f.vx *= 0.3;
+        f.usedUp = true; f.jumps = 2; f.onGround = false;
+        sfx.upper(); break;
+      case 'ball':
+        break;
+      default:
+        sfx.swing();
+    }
+  }
+
+  // ワザの当たり判定（四角）
+  function hitbox(f, type) {
+    const M = MOVES[type];
+    const front = (r) => f.facing > 0
+      ? [f.x + f.w / 2 - 6, f.x + f.w / 2 - 6 + r]
+      : [f.x - f.w / 2 + 6 - r, f.x - f.w / 2 + 6];
+    switch (type) {
+      case 'air':
+        return { x1: f.x - f.w / 2 - M.reach, x2: f.x + f.w / 2 + M.reach, y1: f.y - f.h - 8, y2: f.y + 6 };
+      case 'meteor': {
+        const [x1, x2] = front(M.reach);
+        return { x1: x1 - 10 * f.facing, x2: x2 - 10 * f.facing, y1: f.y - f.h * 0.4, y2: f.y + 26 };
+      }
+      case 'upper':
+        return { x1: f.x - f.w / 2 - 6, x2: f.x + f.w / 2 + 6, y1: f.y - f.h - M.reach, y2: f.y - f.h * 0.3 };
+      case 'dash': {
+        const [x1, x2] = front(M.reach);
+        return { x1, x2, y1: f.y - f.h * 0.6, y2: f.y };
+      }
+      default: {
+        const [x1, x2] = front(M.reach);
+        return { x1, x2, y1: f.y - f.h * 0.85, y2: f.y - f.h * 0.1 };
+      }
+    }
+  }
+
+  function overlap(a, d) {
+    const b = { x1: d.x - d.w / 2, x2: d.x + d.w / 2, y1: d.y - d.h, y2: d.y };
+    if (a.x2 < b.x1 || a.x1 > b.x2 || a.y2 < b.y1 || a.y1 > b.y2) return null;
+    return { x: (Math.max(a.x1, b.x1) + Math.min(a.x2, b.x2)) / 2, y: (Math.max(a.y1, b.y1) + Math.min(a.y2, b.y2)) / 2 };
+  }
+
+  // ダメージとふっとばし
+  function applyHit(d, M, dirX, charge, hx, hy, extraDmg = 0) {
+    const dmg = M.dmg + extraDmg;
+    d.dmg += dmg;
+    const mult = 1 + charge * 0.8;
+    const kb = (M.base + d.dmg * M.growth) * mult;
+    const wasGround = d.onGround;
+    let ang = M.angle;
+    if (ang < 0 && wasGround) ang = 60;           // 地上の相手にメテオは上に飛ばす
+    const rad = ang * Math.PI / 180;
+    d.vx = dirX * kb * Math.cos(rad);
+    d.vy = -kb * Math.sin(rad);
+    d.onGround = false; d.hang = null; d.ledgeCd = 0.4;
+    d.hitstun = Math.min(kb / 1700, 1.3);
+    d.attack = null; d.charging = null;
+    d.usedUp = false; d.usedSide = false;        // ふっとばされたら復帰ワザがまた使える
+    d.facing = -dirX;
+
+    freeze = 0.04 + Math.min(kb / 15000, 0.12);
+    shake = Math.min(kb / 90, 14);
+    const spike = ang < 0;
+    const big = charge > 0.3 || spike;
+    sparks(hx, hy, big ? 18 : 9, spike ? '#c49bff' : big ? '#ffe066' : '#ffffff');
+    popups.push({ x: d.x, y: d.y - d.h - 6, text: `${dmg}%`, t: 0 });
+    if (spike) sfx.meteor();
+    else if (big) sfx.smash();
+    else sfx.hit(d.dmg);
+  }
+
+  function tryHit(a, d) {
+    if (d.dead || d.inv > 0) return;
+    const type = a.attack.type;
+    const M = MOVES[type];
+    const hit = overlap(hitbox(a, type), d);
+    if (!hit) return;
+    a.attack.hit = true;
+    let dirX = a.facing;
+    if (type === 'air' || type === 'upper') dirX = d.x >= a.x ? 1 : -1;
+    const c = a.attack.charge || 0;
+    const extra = type === 'smash' ? Math.round(c * 10) : type === 'meteor' ? Math.round(c * 6) : 0;
+    applyHit(d, M, dirX, type === 'smash' ? c : 0, hit.x, hit.y, extra);
+  }
+
+  // ===== キャラの動き =====
+  function updateFighter(f, foe, dt) {
+    if (f.dead) {
+      f.respawn -= dt;
+      if (f.respawn <= 0) {
+        f.dead = false;
+        f.x = W / 2; f.y = G - 190;
+        f.vx = 0; f.vy = 0; f.dmg = 0;
+        f.inv = 2.0; f.jumps = 1; f.onGround = false;
+        f.usedUp = false; f.usedSide = false;
+        f.attack = null; f.charging = null; f.hitstun = 0; f.hang = null;
+      }
+      return;
+    }
+
+    const inp = f.isCPU ? f.input : keys;
+    let jumpPressed = inp.jump && !f.prev.jump;
+    const atkDown = inp.attack;
+    let atkPressed = atkDown && !f.prev.attack;
+    let spPressed = inp.special && !f.prev.special;
+    if (!f.isCPU) {
+      jumpPressed = jumpPressed || tapped.jump;
+      atkPressed = atkPressed || tapped.attack;
+      spPressed = spPressed || tapped.special;
+      tapped.jump = tapped.attack = tapped.special = false;
+    }
+    f.prev.jump = inp.jump; f.prev.attack = atkDown; f.prev.special = inp.special;
+
+    f.inv = Math.max(0, f.inv - dt);
+    f.hitstun = Math.max(0, f.hitstun - dt);
+    f.squash = Math.max(0, f.squash - dt * 4);
+    const canAct = f.hitstun <= 0 && !f.attack;
+    const speedMul = f.isCPU ? LEVELS[level].speed : 1;
+    const ax = f.isCPU ? (inp.right ? 1 : 0) - (inp.left ? 1 : 0) : axisX();
+    const ay = f.isCPU ? (inp.down ? 1 : inp.up ? -1 : 0) : axisY();
+    const dirHeld = Math.sign(ax);
+    const mv = f.attack ? f.attack.type : null;
+    f.ledgeCd = Math.max(0, f.ledgeCd - dt);
+    f.dropT = Math.max(0, f.dropT - dt);
+    f.airT = f.onGround ? 0 : f.airT + dt;
+
+    // 崖につかまっている
+    if (f.hang) { updateHang(f, dt, { jumpPressed, atkPressed, spPressed, ax, ay }); return; }
+
+    // 左右移動
+    if (mv === 'rocket' || mv === 'dash') {
+      // とっしん中・すべりこみ中は勢いをそのままに、終わりぎわに止まる
+      const M = MOVES[mv];
+      if (f.attack.t > M.startup + M.active) f.vx *= Math.max(0, 1 - (mv === 'dash' ? 10 : 6) * dt);
+    } else if (canAct && !(f.charging && f.onGround)) {
+      const target = dirHeld * (f.onGround ? 175 : 155) * speedMul * Math.min(1, Math.abs(ax) * 1.4);
+      const k = f.onGround ? 14 : 6;
+      f.vx += (target - f.vx) * Math.min(1, k * dt);
+      if (dirHeld && !f.charging) f.facing = dirHeld;
+    } else if (f.onGround) {
+      f.vx *= Math.max(0, 1 - 10 * dt);
+    } else if (f.hitstun > 0) {
+      f.vx *= Math.max(0, 1 - 0.5 * dt);
+    } else {
+      f.vx *= Math.max(0, 1 - 2 * dt);
+    }
+
+    // ジャンプ（地上で1回＋空中で1回）
+    if (jumpPressed && canAct && !f.charging) {
+      if (f.onGround) { f.vy = -500; f.jumps = 1; f.onGround = false; f.squash = 1; sfx.jump(); }
+      else if (f.jumps < 2) { f.vy = -450; f.jumps = 2; f.squash = 1; sfx.jump(); puff(f.x, f.y, '#ffffff'); }
+    }
+
+    // とくぎ
+    if (spPressed && canAct && !f.charging) {
+      if (ay < 0 && !f.usedUp) {
+        startMove(f, 'upper');
+      } else if (dirHeld) {
+        if (f.onGround || !f.usedSide) { f.facing = dirHeld; startMove(f, 'rocket'); }
+      } else if (f.onGround) {
+        if (!balls.some(b => b.owner === f)) startMove(f, 'ball');
+      } else if (!f.usedUp) {
+        startMove(f, 'upper');
+      }
+    }
+
+    // こうげき：押してためる → 離して出す
+    if (canAct && !f.attack) {
+      if (atkPressed && !f.charging) f.charging = { t: 0, air: !f.onGround, moving: Math.abs(f.vx) > 110 && dirHeld !== 0 };
+      if (f.charging) {
+        f.charging.t += dt;
+        const t = f.charging.t;
+        if (!atkDown || t >= 1.2) {
+          const charge = Math.min(1, Math.max(0, (t - CHARGE_MIN) / 0.8));
+          let type;
+          if (!f.onGround) type = t < CHARGE_MIN ? 'air' : 'meteor';
+          else if (t < CHARGE_MIN) type = (f.charging.moving || (Math.abs(f.vx) > 110 && dirHeld)) ? 'dash' : 'jab';
+          else type = 'smash';
+          f.charging = null;
+          startMove(f, type, charge);
+        }
+      }
+    } else if (f.hitstun > 0) {
+      f.charging = null;
+    }
+
+    // ワザの進行
+    if (f.attack) {
+      const M = MOVES[f.attack.type];
+      f.attack.t += dt;
+      const t = f.attack.t;
+      if (f.attack.type === 'ball') {
+        if (!f.attack.fired && t >= M.startup) {
+          f.attack.fired = true;
+          balls.push({ owner: f, x: f.x + f.facing * (f.w / 2 + 8), y: f.y - f.h * 0.55, vx: f.facing * 330, life: 1.3, t: 0 });
+          sfx.ball();
+        }
+      } else if (t >= M.startup && t <= M.startup + M.active && !f.attack.hit) {
+        tryHit(f, foe);
+      }
+      if (f.attack && f.attack.type === 'rocket' && t < M.startup + M.active) f.vy = Math.min(f.vy, -10);
+      if (f.attack && t >= M.end) f.attack = null;
+    }
+
+    // スティック下：すり抜け床から降りる／急降下
+    if (ay > 0 && canAct) {
+      if (f.onGround && f.plat && !f.plat.main) { f.dropT = 0.25; f.onGround = false; f.y += 3; f.vy = 60; }
+      else if (!f.onGround && f.vy > 0 && f.hitstun <= 0) f.vy = Math.max(f.vy, 720);
+    }
+    // 重力と移動（空中でためると少しふわっとする）
+    const g = (f.charging && !f.onGround && f.charging.t > CHARGE_MIN) ? GRAVITY * 0.55 : GRAVITY;
+    f.vy = Math.min(f.vy + g * dt, MAX_FALL + (f.hitstun > 0 ? 300 : 0));
+    const prevY = f.y;
+    f.x += f.vx * dt;
+    f.y += f.vy * dt;
+
+    // 足場に着地
+    const wasGround = f.onGround;
+    f.onGround = false;
+    for (const p of platforms) {
+      if (!p.main && f.dropT > 0) continue;
+      if (f.vy >= 0 && prevY <= p.y + 1 && f.y >= p.y && f.x > p.x1 - 8 && f.x < p.x2 + 8) {
+        f.y = p.y; f.vy = 0; f.onGround = true; f.jumps = 0; f.plat = p;
+        f.usedUp = false; f.usedSide = false;
+        if (!wasGround) {
+          f.squash = 0.8;
+          // 空中ワザの途中で着地したらワザは終わり
+          if (f.attack && (f.attack.type === 'air' || f.attack.type === 'meteor' || f.attack.type === 'upper')) f.attack = null;
+          if (f.charging && f.charging.air) f.charging = null;
+        }
+      }
+    }
+    // メインステージの横にぶつかる
+    const m = platforms[0];
+    if (f.y > m.y + 1 && f.x + f.w / 2 > m.x1 && f.x - f.w / 2 < m.x2) {
+      if (f.x < (m.x1 + m.x2) / 2) f.x = m.x1 - f.w / 2; else f.x = m.x2 + f.w / 2;
+      f.vx = 0;
+    }
+
+    // 崖をつかむ
+    tryGrabLedge(f);
+
+    // 場外判定
+    if (f.x < -90 || f.x > W + 90 || f.y > VH + 120 || f.y < -300) knockOut(f);
+  }
+
+  // ===== 崖つかまり =====
+  function tryGrabLedge(f) {
+    if (f.onGround || f.hang || f.ledgeCd > 0 || f.hitstun > 0 || f.airT < 0.08 || f.vy < -250) return;
+    if (f.attack && f.attack.type !== 'upper' && f.attack.type !== 'rocket') return;
+    const m = platforms[0];
+    for (const side of [-1, 1]) {
+      const ex = side < 0 ? m.x1 : m.x2;
+      const out = (f.x - ex) * side;                // 外側にどれだけ出ているか
+      if (out > -4 && out < 56 && f.y > G + 2 && f.y < G + 90 && !fighters.some(o => o !== f && o.hang && o.hang.side === side)) {
+        f.hang = { side, t: 0 };
+        f.attack = null; f.charging = null;
+        f.jumps = 1; f.usedUp = false; f.usedSide = false;
+        f.inv = Math.max(f.inv, 0.5);
+        f.vx = 0; f.vy = 0;
+        sfx.grab();
+        puff(ex, G, '#ffffff');
+        return;
+      }
+    }
+  }
+  function updateHang(f, dt, inp) {
+    const h = f.hang, side = h.side, m = platforms[0];
+    const ex = side < 0 ? m.x1 : m.x2;
+    if (h.climb !== undefined) {
+      // 登っているところ
+      h.climb += dt;
+      const p = Math.min(1, h.climb / 0.22);
+      f.x = h.x0 + (ex - side * 20 - h.x0) * p;
+      f.y = h.y0 + (G - h.y0) * p - Math.sin(p * Math.PI) * 14;
+      if (p >= 1) {
+        f.hang = null; f.onGround = true; f.plat = m; f.y = G; f.vy = 0; f.vx = 0; f.jumps = 0; f.facing = -side;
+        if (h.attack) startMove(f, 'jab');
+      }
+      return;
+    }
+    h.t += dt;
+    f.x = ex + side * f.w / 2; f.y = G + f.h - 8;
+    f.vx = 0; f.vy = 0; f.facing = -side;
+    if (h.t < 0.15) return;                        // つかんだ直後は少し待つ
+    // つかんだときに倒しっぱなしだった向きは、一度スティックをもどすまで無視する
+    if (Math.abs(inp.ax) < 0.4 && inp.ay === 0) h.neutral = true;
+    const toward = h.neutral && (inp.ax * -side > 0.4 || inp.ay < 0);
+    const away = h.neutral && (inp.ax * side > 0.4 || inp.ay > 0);
+    if (inp.jumpPressed) {
+      f.hang = null; f.x = ex - side * 10; f.y = G - 2; f.vy = -580; f.vx = -side * 60; f.jumps = 1; f.ledgeCd = 0.5; f.squash = 1;
+      sfx.jump(); puff(f.x, f.y, '#ffffff');
+    } else if (inp.atkPressed || inp.spPressed) {
+      h.climb = 0; h.x0 = f.x; h.y0 = f.y; h.attack = true;
+    } else if (toward) {
+      h.climb = 0; h.x0 = f.x; h.y0 = f.y;
+    } else if (away || h.t > 4) {
+      f.hang = null; f.ledgeCd = 0.7; f.vy = 40;
+    }
+  }
+
+  function updateBalls(dt) {
+    for (const b of balls) {
+      b.t += dt;
+      b.x += b.vx * dt;
+      if (Math.random() < 0.5) particles.push({ x: b.x, y: b.y + (Math.random() - 0.5) * 8, vx: -b.vx * 0.1, vy: 0, life: 0.25, t: 0, color: b.owner.color, size: 3 });
+      for (const f of fighters) {
+        if (f === b.owner || f.dead || f.inv > 0 || b.t >= b.life) continue;
+        const hit = overlap({ x1: b.x - 8, x2: b.x + 8, y1: b.y - 8, y2: b.y + 8 }, f);
+        if (hit) {
+          applyHit(f, MOVES.ball, b.vx > 0 ? 1 : -1, 0, hit.x, hit.y);
+          b.t = b.life;
+        }
+      }
+      if (b.x < -40 || b.x > W + 40) b.t = b.life;
+    }
+    balls = balls.filter(b => b.t < b.life);
+  }
+
+  function knockOut(f) {
+    f.stocks--;
+    f.dead = true;
+    f.respawn = 1.1;
+    shake = 16;
+    sfx.ko();
+    const bx = Math.max(10, Math.min(W - 10, f.x));
+    const by = Math.max(10, Math.min(VH - 10, f.y - 20));
+    sparks(bx, by, 30, f.color);
+    if (f.stocks <= 0) {
+      f.respawn = Infinity;
+      winner = f === player ? cpu : player;
+      state = 'end';
+      endTimer = 1.4;
+    }
+  }
+
+  // ===== エフェクト =====
+  function sparks(x, y, n, color) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 260;
+      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.35 + Math.random() * 0.3, t: 0, color, size: 2 + Math.random() * 3 });
+    }
+  }
+  function puff(x, y, color) {
+    for (let i = 0; i < 6; i++) {
+      particles.push({ x: x + (Math.random() - 0.5) * 20, y, vx: (Math.random() - 0.5) * 60, vy: 40 + Math.random() * 40, life: 0.3, t: 0, color, size: 3 });
+    }
+  }
+
+  // ===== 更新 =====
+  function update(dt) {
+    if (state === 'title') return;
+
+    for (const p of particles) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.94; p.vy *= 0.94; }
+    particles = particles.filter(p => p.t < p.life);
+    for (const p of popups) p.t += dt;
+    popups = popups.filter(p => p.t < 0.8);
+    shake = Math.max(0, shake - dt * 40);
+
+    if (freeze > 0) { freeze -= dt; return; }
+
+    if (state === 'play') {
+      cpuThink(dt);
+      updateFighter(player, cpu, dt);
+      updateFighter(cpu, player, dt);
+      updateBalls(dt);
+    } else if (state === 'end') {
+      updateFighter(winner, winner === player ? cpu : player, dt);
+      updateBalls(dt);
+      endTimer -= dt;
+      if (endTimer <= 0 && resultScreen.classList.contains('hidden')) showResult();
+    }
+
+    // ロケット・アッパー中は軌跡を出す
+    for (const f of fighters) {
+      if (!f.dead && f.attack && (f.attack.type === 'rocket' || f.attack.type === 'upper') && Math.random() < 0.7) {
+        particles.push({ x: f.x + (Math.random() - 0.5) * 16, y: f.y - f.h / 2 + (Math.random() - 0.5) * 20, vx: -f.vx * 0.2, vy: -f.vy * 0.2, life: 0.3, t: 0, color: '#ffd27a', size: 3 });
+      }
+    }
+  }
+
+  // ===== 描画 =====
+  function drawStage() {
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, '#2b3a7a');
+    g.addColorStop(1, '#f2a65a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, VH);
+    ctx.fillStyle = 'rgba(30,30,70,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(0, VH);
+    for (let x = 0; x <= W; x += 40) ctx.lineTo(x, G + 20 - 40 - 30 * Math.sin(x * 0.03) - 20 * Math.sin(x * 0.011));
+    ctx.lineTo(W, VH);
+    ctx.fill();
+
+    const m = platforms[0];
+    ctx.fillStyle = '#3d2f5c';
+    ctx.beginPath();
+    ctx.moveTo(m.x1, m.y);
+    ctx.lineTo(m.x2, m.y);
+    ctx.lineTo(m.x2 - 30, m.y + 70);
+    ctx.lineTo(m.x1 + 30, m.y + 70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#7ed36a';
+    ctx.fillRect(m.x1, m.y, m.x2 - m.x1, 8);
+    // 崖のはしっこ（つかめる場所）
+    ctx.fillStyle = '#5bb04a';
+    ctx.fillRect(m.x1 - 3, m.y, 8, 12);
+    ctx.fillRect(m.x2 - 5, m.y, 8, 12);
+
+    for (const p of platforms) {
+      if (p.main) continue;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(p.x1, p.y, p.x2 - p.x1, 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.fillRect(p.x1 + 4, p.y + 5, p.x2 - p.x1 - 8, 4);
+    }
+  }
+
+  function moveExt(f) {
+    const M = MOVES[f.attack.type], t = f.attack.t;
+    if (t < M.startup) return -0.3 * (t / M.startup);
+    if (t < M.startup + M.active) return 1;
+    return Math.max(0, 1 - (t - M.startup - M.active) / (M.end - M.startup - M.active));
+  }
+
+  function drawFist(x, y, r, color, glow) {
+    if (glow) {
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(x, y, r + 6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#1b1f3b'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  function drawFighter(f) {
+    if (f.dead) return;
+    if (f.inv > 0 && Math.floor(f.inv * 12) % 2 === 0) ctx.globalAlpha = 0.45;
+
+    const charge = f.charging ? Math.min(1, f.charging.t / 1.0) : 0;
+    const shakeX = charge > 0.2 ? (Math.random() - 0.5) * charge * 3 : 0;
+    const sq = f.squash * 0.18;
+    const w = f.w * (1 + sq), h = f.h * (1 - sq);
+    const x = f.x + shakeX, y = f.y;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    if (f.onGround) { ctx.beginPath(); ctx.ellipse(f.x, f.y + 2, 18, 4, 0, 0, Math.PI * 2); ctx.fill(); }
+
+    if (charge > 0.2) {
+      ctx.fillStyle = f.charging.air ? `rgba(196,155,255,${0.15 + charge * 0.35})` : `rgba(255,224,102,${0.15 + charge * 0.35})`;
+      ctx.beginPath(); ctx.arc(x, y - h / 2, 26 + charge * 10, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 体（くるりんキック中は回転）
+    ctx.save();
+    if (f.attack && f.attack.type === 'air') {
+      ctx.translate(x, y - h / 2);
+      ctx.rotate(f.facing * Math.min(1, f.attack.t / MOVES.air.end) * Math.PI * 2);
+      ctx.translate(-x, -(y - h / 2));
+    }
+    ctx.fillStyle = f.hitstun > 0 ? '#ffffff' : f.color;
+    roundRect(x - w / 2, y - h, w, h, 13);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    roundRect(x - w / 2 + 5, y - h + 4, w - 14, 8, 4);
+    ctx.fill();
+
+    const ex = x + f.facing * 6, ey = y - h * 0.62;
+    ctx.fillStyle = '#1b1f3b';
+    if (f.hitstun > 0) {
+      ctx.strokeStyle = '#1b1f3b'; ctx.lineWidth = 2;
+      for (const ox of [-6, 6]) {
+        ctx.beginPath();
+        ctx.moveTo(ex + ox - 3, ey - 3); ctx.lineTo(ex + ox + 3, ey + 3);
+        ctx.moveTo(ex + ox + 3, ey - 3); ctx.lineTo(ex + ox - 3, ey + 3);
+        ctx.stroke();
+      }
+    } else {
+      ctx.fillRect(ex - 8, ey - 4, 4, 8);
+      ctx.fillRect(ex + 4, ey - 4, 4, 8);
+    }
+    ctx.restore();
+
+    // 崖をつかむ手
+    if (f.hang && f.hang.climb === undefined) {
+      const ex = f.hang.side < 0 ? platforms[0].x1 : platforms[0].x2;
+      for (const o of [-5, 5]) drawFist(ex + f.hang.side * 3, G - 1 + o * 0.2, 6, f.color);
+    }
+    // ワザの手足
+    if (f.attack) {
+      const type = f.attack.type, M = MOVES[type], e = moveExt(f);
+      const c = f.attack.charge || 0;
+      if (type === 'air') {
+        const a = f.attack.t / M.end * Math.PI * 2 * f.facing;
+        const r = w / 2 + 10;
+        drawFist(x + Math.cos(a) * r, y - h / 2 + Math.sin(a) * r, 7, f.color);
+        drawFist(x - Math.cos(a) * r, y - h / 2 - Math.sin(a) * r, 7, f.color);
+      } else if (type === 'meteor') {
+        drawFist(x + f.facing * (w / 2 + 2), y - h * 0.5 + Math.max(0, e) * 30, 9 + c * 3, f.color, e === 1 ? 'rgba(196,155,255,0.6)' : null);
+      } else if (type === 'upper') {
+        drawFist(x + f.facing * 8, y - h - 8 - Math.max(0, e) * 10, 9, f.color, e === 1 ? 'rgba(255,210,122,0.6)' : null);
+      } else if (type === 'ball') {
+        drawFist(x + f.facing * (w / 2 + Math.max(0, e) * 8), y - h * 0.55, 7, f.color);
+      } else if (type === 'rocket') {
+        drawFist(x + f.facing * (w / 2 + 8), y - h * 0.5, 9, f.color, 'rgba(255,210,122,0.5)');
+      } else {
+        const fy = type === 'dash' ? y - h * 0.25 : y - h * 0.5;
+        const r = type === 'smash' ? 9 + c * 4 : 7;
+        const fx = x + f.facing * (w / 2 + e * (M.reach - 8));
+        drawFist(fx, fy, r, f.color, type === 'smash' && e === 1 ? 'rgba(255,224,102,0.5)' : null);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = f.color;
+    ctx.font = '800 11px -apple-system, "Hiragino Sans", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.isCPU ? 'CPU' : 'P1', f.x, f.y - f.h - 8);
+
+    // 出したワザの名前
+    if (f.attack && f.attack.t < 0.5 && f.attack.type !== 'jab') {
+      ctx.globalAlpha = 1 - f.attack.t / 0.5;
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 10px -apple-system, "Hiragino Sans", sans-serif';
+      ctx.fillText(MOVES[f.attack.type].name, f.x, f.y - f.h - 22);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawBalls() {
+    for (const b of balls) {
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = b.owner.color;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(b.x - 2, b.y - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function drawOffscreen(f) {
+    if (f.dead) return;
+    const out = f.x < 0 || f.x > W || f.y - f.h < 0;
+    if (!out) return;
+    const cx = Math.max(16, Math.min(W - 16, f.x));
+    const cy = Math.max(16, Math.min(VH - 16, f.y - f.h / 2));
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.arc(cx, cy, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = f.color;
+    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawHud() {
+    const y = VH - 14;
+    const items = [[player, W * 0.28], [cpu, W * 0.72]];
+    for (const [f, x] of items) {
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      roundRect(x - 62, y - 58, 124, 64, 12);
+      ctx.fill();
+      const d = Math.min(f.dmg, 150) / 150;
+      ctx.fillStyle = `hsl(${55 - d * 55}, 100%, ${95 - d * 40}%)`;
+      ctx.font = '900 26px -apple-system, "Hiragino Sans", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(f.dead && f.stocks > 0 ? '—' : `${Math.floor(f.dmg)}%`, x, y - 14);
+      for (let i = 0; i < STOCKS; i++) {
+        ctx.fillStyle = i < f.stocks ? f.color : 'rgba(255,255,255,0.18)';
+        ctx.beginPath(); ctx.arc(x - 16 + i * 16, y - 2, 5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = '#fff';
+      ctx.font = '800 11px -apple-system, "Hiragino Sans", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(f.isCPU ? 'CPU' : 'あなた', x - 54, y - 44);
+    }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function draw() {
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+    drawStage();
+    if (fighters) {
+      for (const f of fighters) drawFighter(f);
+      drawBalls();
+      for (const p of particles) {
+        ctx.globalAlpha = Math.max(0, 1 - p.t / p.life);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.globalAlpha = 1;
+      for (const p of popups) {
+        ctx.globalAlpha = 1 - p.t / 0.8;
+        ctx.fillStyle = '#fff';
+        ctx.font = '900 14px -apple-system, "Hiragino Sans", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.text, p.x, p.y - p.t * 30);
+      }
+      ctx.globalAlpha = 1;
+      for (const f of fighters) drawOffscreen(f);
+      drawHud();
+    }
+  }
+
+  // ===== 画面の切りかえ =====
+  const titleScreen = document.getElementById('titleScreen');
+  const resultScreen = document.getElementById('resultScreen');
+  const movesScreen = document.getElementById('movesScreen');
+
+  function loadWins() { try { return parseInt(localStorage.getItem(WINS_KEY) || '0', 10) || 0; } catch (e) { return 0; } }
+  function saveWins(v) { try { localStorage.setItem(WINS_KEY, String(v)); } catch (e) {} }
+
+  function start(lv) {
+    initAudio();
+    level = lv;
+    newMatch();
+    titleScreen.classList.add('hidden');
+    resultScreen.classList.add('hidden');
+    for (const k in keys) keys[k] = false;
+    for (const k in tapped) tapped[k] = false;
+    state = 'play';
+  }
+
+  function showResult() {
+    const win = winner === player;
+    let wins = loadWins();
+    if (win) { wins++; saveWins(wins); sfx.win(); } else { sfx.lose(); }
+    const resultText = document.getElementById('resultText');
+    resultText.textContent = win ? 'かち！' : 'まけ…';
+    resultText.className = 'result ' + (win ? 'win' : 'lose');
+    const names = { easy: 'よわい', normal: 'ふつう', hard: 'つよい' };
+    document.getElementById('winsText').textContent = `${names[level]} CPU と対戦 ／ これまでの勝ち: ${wins}回`;
+    resultScreen.classList.remove('hidden');
+  }
+
+  // ボタンは pointerup で反応させる（iOSでタップが効かないのを防ぐ）
+  function onTap(el, fn) {
+    el.addEventListener('pointerup', (e) => { e.preventDefault(); fn(); });
+  }
+  document.querySelectorAll('[data-level]').forEach((b) => onTap(b, () => start(b.dataset.level)));
+  onTap(document.getElementById('againBtn'), () => start(level));
+  onTap(document.getElementById('levelBtn'), () => {
+    resultScreen.classList.add('hidden');
+    titleScreen.classList.remove('hidden');
+    state = 'title';
+  });
+  onTap(document.getElementById('movesBtn'), () => { titleScreen.classList.add('hidden'); movesScreen.classList.remove('hidden'); });
+  onTap(document.getElementById('movesClose'), () => { movesScreen.classList.add('hidden'); titleScreen.classList.remove('hidden'); });
+
+  // ===== メインループ =====
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min((now - last) / 1000, 1 / 30);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  newMatch();
+  requestAnimationFrame(loop);
+  if (TEST_MODE) window.__dbg = () => ({ move: player.attack && player.attack.type, balls: balls.length, vy: Math.round(player.vy), x: Math.round(player.x), cpuDmg: cpu.dmg, cpuVy: Math.round(cpu.vy), onGround: player.onGround, y: Math.round(player.y - G), hang: player.hang && player.hang.side, cpuHang: cpu.hang && cpu.hang.side, cpuX: Math.round(cpu.x), cpuY: Math.round(cpu.y - G) });
+  if (TEST_MODE) window.__brawl = { get player() { return player; }, get cpu() { return cpu; }, get G() { return G; } };
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('../sw.js').catch(() => {});
+  }
+});
+</script>
+</body>
+</html>

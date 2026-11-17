@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>ヘンテコアーケード</title>
+<meta name="theme-color" content="#151833">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ゲームズ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at 20% 0%, #2b2f66 0%, #151833 55%, #0e1024 100%) fixed;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    padding: calc(env(safe-area-inset-top, 0px) + 28px) 18px calc(env(safe-area-inset-bottom, 0px) + 32px);
+    -webkit-tap-highlight-color: transparent;
+  }
+  header { max-width: 560px; margin: 0 auto 22px; }
+  h1 { font-size: 30px; font-weight: 900; margin: 0; letter-spacing: .02em; }
+  .lead { margin: 6px 0 0; font-size: 14px; opacity: .7; }
+
+  .grid {
+    max-width: 560px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  .card {
+    display: flex; flex-direction: column; gap: 10px;
+    padding: 16px; border-radius: 20px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.08);
+    color: inherit; text-decoration: none;
+    transition: transform .12s, background .12s;
+  }
+  .card:active { transform: scale(.97); background: rgba(255,255,255,.13); }
+  .card img { width: 64px; height: 64px; border-radius: 16px; box-shadow: 0 6px 16px rgba(0,0,0,.3); }
+  .name { font-weight: 800; font-size: 17px; }
+  .desc { font-size: 12.5px; opacity: .72; line-height: 1.5; }
+  .best { margin-top: auto; font-size: 12px; font-weight: 700; color: #ffe066; }
+  .card.soon { opacity: .45; pointer-events: none; }
+  .card.soon .ph {
+    width: 64px; height: 64px; border-radius: 16px;
+    background: rgba(255,255,255,.1);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+  }
+  .hint {
+    max-width: 560px; margin: 26px auto 0; padding: 14px 16px;
+    border-radius: 14px; background: rgba(255,255,255,.06);
+    font-size: 13px; line-height: 1.7; opacity: .85;
+  }
+  .hint.hidden { display: none; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🎮 ヘンテコアーケード</h1>
+    <p class="lead">遊びたいゲームをタップしてね</p>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+  <p style="text-align:center;margin-top:22px"><a href="data.html" style="color:#fff;opacity:.6;font-size:13px">📦 セーブデータの引っこし</a></p>
+  <p class="hint" id="hint">
+    📱 iPhoneなら、Safariの共有ボタン →「ホーム画面に追加」で、アプリみたいにアイコンから遊べるよ！
+  </p>
+
+<script>
+  // ===== ゲーム一覧 =====
+  // 新しいゲームを作ったら、ここに1行足すだけでトップに並ぶ
+  const GAMES = [
+    {
+      id: 'stack',
+      name: 'つみあげタワー',
+      desc: 'タップでブロックを積み上げよう',
+      icon: 'stack/icons/icon-192.png',
+      bestKey: 'stack-tower-best',
+      bestLabel: 'BEST',
+    },
+    {
+      id: 'brawl',
+      name: 'ふっとばしバトル',
+      desc: 'CPUを場外へふっとばせ！',
+      icon: 'brawl/icons/icon-192.png',
+      bestKey: 'brawl-wins',
+      bestLabel: '勝ち',
+    },
+    {
+      id: 'mart',
+      name: 'わくわくマート',
+      desc: '3Dでお店をそだてよう（ミッション・スタッフつき）',
+      icon: 'mart/icons/icon-192.png',
+      bestKey: 'mart-best',
+      bestLabel: '売上 💰',
+    },
+    {
+      id: 'heist',
+      name: 'ぬすめ！ヘンテコ',
+      desc: 'ヘンテコを集めて、ぬすんで、守ろう',
+      icon: 'heist/icons/icon-192.png',
+      bestKey: 'heist-best',
+      bestLabel: 'かせぎ 💰',
+    },
+  ];
+
+  function getBest(key) {
+    try { return parseInt(localStorage.getItem(key) || '0', 10) || 0; } catch (e) { return 0; }
+  }
+
+  const grid = document.getElementById('grid');
+  for (const g of GAMES) {
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = g.id + '/';
+    const best = g.bestKey ? getBest(g.bestKey) : 0;
+    a.innerHTML = `
+      <img src="${g.icon}" alt="">
+      <div class="name">${g.name}</div>
+      <div class="desc">${g.desc}</div>
+      ${best > 0 ? `<div class="best">${g.bestLabel} ${best}</div>` : ''}
+    `;
+    grid.appendChild(a);
+  }
+  // 「準備中」のカード
+  const soon = document.createElement('div');
+  soon.className = 'card soon';
+  soon.innerHTML = `<div class="ph">？</div><div class="name">次のゲーム</div><div class="desc">準備中…</div>`;
+  grid.appendChild(soon);
+
+  // ホーム画面から開いているときはヒントを隠す
+  const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if (standalone) document.getElementById('hint').classList.add('hidden');
+
+  // ===== オフライン対応 =====
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
